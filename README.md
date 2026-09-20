@@ -1,0 +1,2 @@
+# QuickBite
+Local Implementation Guide
