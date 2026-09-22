@@ -1,0 +1,6 @@
+{
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.jdt.ls.java.home": "/home/akaranam/.sdkman/candidates/java/25.0.4-tem",
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.jdt.ls.lombokSupport.enabled": false
+}

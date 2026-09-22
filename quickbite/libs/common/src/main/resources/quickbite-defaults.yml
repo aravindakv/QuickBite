@@ -1,0 +1,48 @@
+spring:
+  threads:
+    virtual:
+      enabled: true            # blocking I/O on virtual threads: thread-per-request without the thread cost
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      acks: all                # leader + in-sync replicas must persist before ack
+      properties:
+        enable.idempotence: true   # broker de-dupes producer retries
+        linger.ms: 5               # wait up to 5 ms to batch -> far fewer requests
+        compression.type: zstd
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    listener:
+      ack-mode: record         # commit offset after each record is processed successfully
+
+server:
+  shutdown: graceful           # finish in-flight requests on SIGTERM
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true          # /actuator/health/liveness and /readiness even outside Kubernetes
+      show-details: always     # local learning only; hide in production
+      group:
+        liveness:
+          include: livenessState,loopWatchdog
+
+logging:
+  pattern:
+    level: "%5p [sid=%X{sessionId:-} cid=%X{correlationId:-}]"
+
+quickbite:
+  security:
+    issuer: ${KC_ISSUER:http://localhost:8180/realms/quickbite}
+    jwk-set-uri: ${KC_JWKS:http://localhost:8180/realms/quickbite/protocol/openid-connect/certs}
+    audience: quickbite-api
+  service-auth:
+    token-uri: ${KC_TOKEN_URI:http://localhost:8180/realms/quickbite/protocol/openid-connect/token}

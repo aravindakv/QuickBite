@@ -1,0 +1,61 @@
+# The official nginx image runs envsubst on *.template files, but only for env vars that are defined,
+# so nginx's own $variables are left alone.
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# Per-client-IP rate limit at the edge (the gateway adds a per-USER limit behind it).
+limit_req_zone $binary_remote_addr zone=perip:10m rate=50r/s;
+
+# "CDN" simulation: cache public GET responses at the edge.
+proxy_cache_path /var/cache/nginx/edge levels=1:2 keys_zone=edge:10m max_size=100m inactive=10m use_temp_path=off;
+
+upstream gateway {
+    server ${GATEWAY_UPSTREAM};
+    keepalive 32;               # reuse TCP connections to the gateway instead of a handshake per request
+}
+
+server {
+    listen 80;
+    client_max_body_size 1m;
+
+    location = /nginx-health { access_log off; return 200 "ok\n"; }
+
+    # WebSockets: long-lived, upgraded connections
+    location /ws/ {
+        proxy_pass http://gateway;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_read_timeout 1h;
+        proxy_send_timeout 1h;
+    }
+
+    # Public, cacheable catalog reads -> served from the edge cache when fresh
+    location /api/restaurants {
+        limit_req zone=perip burst=100 nodelay;
+        proxy_cache edge;
+        proxy_cache_methods GET HEAD;
+        proxy_cache_key "$request_method$request_uri";
+        proxy_cache_lock on;                      # request collapsing: one miss goes upstream, others wait
+        proxy_cache_use_stale error timeout updating http_500 http_502 http_503;
+        add_header X-Cache-Status $upstream_cache_status always;
+        proxy_pass http://gateway;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location / {
+        limit_req zone=perip burst=100 nodelay;
+        proxy_pass http://gateway;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}

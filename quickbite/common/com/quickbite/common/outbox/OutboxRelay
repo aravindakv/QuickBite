@@ -1,0 +1,58 @@
+package com.quickbite.common.outbox;
+
+import com.quickbite.common.context.Headers;
+import com.quickbite.common.health.LoopWatchdog;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+public class OutboxRelay {
+    record Row(UUID id, String topic, String msgKey, String eventType, String payload,
+               String sessionId, String correlationId, Instant createdAt) {}
+
+    private final JdbcClient jdbc;
+    private final KafkaTemplate<String, String> kafka;
+    private final TransactionTemplate tx;
+    private final LoopWatchdog watchdog;
+
+    public OutboxRelay(JdbcClient jdbc, KafkaTemplate<String, String> kafka, TransactionTemplate tx, LoopWatchdog watchdog) {
+        this.jdbc = jdbc; this.kafka = kafka; this.tx = tx; this.watchdog = watchdog;
+    }
+
+    @Scheduled(fixedDelayString = "${quickbite.outbox.poll-ms:500}")
+    public void publishBatch() {
+        watchdog.beat("outbox-relay");
+        tx.executeWithoutResult(status -> {
+            // SKIP LOCKED: several replicas can run the relay without sending the same row twice concurrently
+            var rows = jdbc.sql("""
+                    select id, topic, msg_key, event_type, payload, session_id, correlation_id, created_at
+                    from outbox where published_at is null
+                    order by created_at limit 100 for update skip locked""")
+                .query(Row.class).list();
+            for (Row r : rows) {
+                var rec = new ProducerRecord<String, String>(r.topic(), r.msgKey(), r.payload());
+                header(rec, Headers.K_EVENT_ID, r.id().toString());
+                header(rec, Headers.K_EVENT_TYPE, r.eventType());
+                header(rec, Headers.K_SESSION_ID, r.sessionId());
+                header(rec, Headers.K_CORRELATION_ID, r.correlationId());
+                try {
+                    kafka.send(rec).get(5, TimeUnit.SECONDS); // wait for broker ack (acks=all)
+                } catch (Exception e) {
+                    throw new IllegalStateException("Kafka send failed; batch rolls back and retries", e);
+                }
+                jdbc.sql("update outbox set published_at = now() where id = ?").param(r.id()).update();
+            }
+        });
+    }
+
+    private static void header(ProducerRecord<String, String> rec, String name, String value) {
+        if (value != null) rec.headers().add(name, value.getBytes(StandardCharsets.UTF_8));
+    }
+}

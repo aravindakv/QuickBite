@@ -1,0 +1,6 @@
+com.quickbite.common.context.ContextAutoConfiguration
+com.quickbite.common.security.QuickbiteSecurityAutoConfiguration
+com.quickbite.common.health.WatchdogAutoConfiguration
+com.quickbite.common.web.WebAutoConfiguration
+com.quickbite.common.outbox.OutboxAutoConfiguration
+com.quickbite.common.kafka.KafkaErrorHandlingAutoConfiguration
