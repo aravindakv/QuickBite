@@ -462,7 +462,11 @@ curl -i localhost:8080/api/orders | head -1
 #    ("Connection refused") instead of 401. That proves authentication succeeded.
 curl -i -H "Authorization: Bearer $TOKEN" localhost:8080/api/orders | head -1
 
-# 3) Your session as the gateway sees it
+# 3) Your session as the gateway sees it.
+#    NOTE: the session record is written by SessionGlobalFilter, which only runs for ROUTED requests.
+#    /api/auth/session is a controller inside the gateway, so make one routed call first, otherwise
+#    you only get {"sid": "..."} back (and `jq .username` prints null).
+curl -s -o /dev/null -H "Authorization: Bearer $TOKEN" localhost:8080/api/orders      # routed; 5xx is fine here
 curl -s -H "Authorization: Bearer $TOKEN" localhost:8080/api/auth/session | jq
 
 # 4) Tampered token -> 401 (signature check)
@@ -494,7 +498,7 @@ docker exec -it quickbite-redis-1 redis-cli --scan --pattern 'request_rate_limit
 |---|---|
 | 1 | `401` |
 | 2 | `500`/`503` (not 401) |
-| 3 | JSON with `userId`, `username: alice`, `sid` |
+| 3 | JSON with `userId`, `username: alice`, `sid`, `lastSeen` (only after the routed call above) |
 | 4 | `401` |
 | 5 | A mix of `5xx` and `429`; headers `X-RateLimit-Remaining`, `X-RateLimit-Burst-Capacity` |
 | 6 | `204`, then `WWW-Authenticate: ... session revoked` |
@@ -1030,7 +1034,7 @@ public class JsonSchemaRegistry {
 
 ### 5.6 Route filters: `ValidateJson`, `ValidateQuery`, `NoBody`
 
-Spring Cloud Gateway derives the filter name from the class name minus `GatewayFilterFactory`.
+These classes also live under `services/gateway/src/main/java/com/quickbite/gateway/validation/`. Spring Cloud Gateway derives the filter name from the class name minus `GatewayFilterFactory`.
 
 `ValidateJsonGatewayFilterFactory.java`
 

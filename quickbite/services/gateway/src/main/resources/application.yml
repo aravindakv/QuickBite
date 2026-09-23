@@ -1,0 +1,69 @@
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  application:
+    name: gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+  cloud:
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            connect-timeout: 2000     # ms: fail fast if a service is down
+            response-timeout: 10s     # default; tightened per route below
+          default-filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 40
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@userKeyResolver}"
+          routes:
+            - id: catalog
+              uri: ${CATALOG_URL:http://localhost:8081}
+              predicates: ["Path=/api/restaurants,/api/restaurants/**"]
+            - id: orders
+              uri: ${ORDER_URL:http://localhost:8082}
+              predicates: ["Path=/api/orders,/api/orders/**"]
+              metadata:
+                response-timeout: 3000
+            - id: payments
+              uri: ${PAYMENT_URL:http://localhost:8083}
+              predicates: ["Path=/api/payments/**"]
+            - id: riders
+              uri: ${LOCATION_URL:http://localhost:8084}
+              predicates: ["Path=/api/riders/**"]
+            - id: rider-ws
+              uri: ${LOCATION_WS_URL:ws://localhost:8084}
+              predicates: ["Path=/ws/rider"]
+            - id: updates-ws
+              uri: ${REALTIME_WS_URL:ws://localhost:8085}
+              predicates: ["Path=/ws/updates"]
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+quickbite:
+  security:
+    issuer: ${KC_ISSUER:http://localhost:8180/realms/quickbite}
+    jwk-set-uri: ${KC_JWKS:http://localhost:8180/realms/quickbite/protocol/openid-connect/certs}
+    audience: quickbite-api
+  session:
+    revoke-ttl: 10h             # = Keycloak ssoSessionMaxLifespan
+    idle-ttl: 30m
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO

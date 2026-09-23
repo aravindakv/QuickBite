@@ -11,10 +11,7 @@ rootProject.name = "quickbite"
 
 include(
     "libs:common",
-    // Commented out until these service directories are scaffolded — Gradle refuses to
-    // configure a project whose directory doesn't exist, which was breaking sync and
-    // Ctrl+click navigation in the Java extension. Re-enable as each module is created.
-    // "services:gateway",
+    "services:gateway",
     // "services:catalog-svc",
     // "services:order-svc",
     // "services:payment-svc",

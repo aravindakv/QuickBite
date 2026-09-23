@@ -19,6 +19,7 @@ public class LoopWatchdog implements HealthIndicator {
         beats.computeIfAbsent(loop, k -> new AtomicLong()).set(System.nanoTime());
     }
 
+    @SuppressWarnings("null")
     @Override
     public Health health() {
         long now = System.nanoTime();
