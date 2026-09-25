@@ -1,0 +1,178 @@
+[
+  {"id": "r1", "name": "Dosa Junction", "cuisine": "South Indian", "cityId": "blr", "area": "Koramangala", "lat": 12.9352, "lon": 77.6245, "rating": 4.5, "avgPrepMinutes": 15, "menu": [
+    {"id": "r1-i1", "name": "Masala Dosa", "price": 120, "veg": true, "available": true},
+    {"id": "r1-i2", "name": "Idli Vada Combo", "price": 90, "veg": true, "available": true},
+    {"id": "r1-i3", "name": "Rava Dosa", "price": 130, "veg": true, "available": true},
+    {"id": "r1-i4", "name": "Mini Meals", "price": 180, "veg": true, "available": true},
+    {"id": "r1-i5", "name": "Filter Coffee", "price": 40, "veg": true, "available": true},
+    {"id": "r1-i6", "name": "Ghee Pongal", "price": 110, "veg": true, "available": false}
+  ]},
+  {"id": "r2", "name": "Biryani Bros", "cuisine": "Hyderabadi", "cityId": "blr", "area": "BTM Layout", "lat": 12.934, "lon": 77.6101, "rating": 4.3, "avgPrepMinutes": 25, "menu": [
+    {"id": "r2-i1", "name": "Chicken Dum Biryani", "price": 320, "veg": false, "available": true},
+    {"id": "r2-i2", "name": "Mutton Biryani", "price": 420, "veg": false, "available": true},
+    {"id": "r2-i3", "name": "Veg Dum Biryani", "price": 240, "veg": true, "available": true},
+    {"id": "r2-i4", "name": "Double Ka Meetha", "price": 120, "veg": true, "available": true},
+    {"id": "r2-i5", "name": "Mirchi Ka Salan", "price": 90, "veg": true, "available": true},
+    {"id": "r2-i6", "name": "Haleem", "price": 350, "veg": false, "available": false}
+  ]},
+  {"id": "r3", "name": "Pasta Stop", "cuisine": "Italian", "cityId": "blr", "area": "Indiranagar", "lat": 12.9719, "lon": 77.6412, "rating": 4.1, "avgPrepMinutes": 20, "menu": [
+    {"id": "r3-i1", "name": "Margherita Pizza", "price": 350, "veg": true, "available": true},
+    {"id": "r3-i2", "name": "Penne Arrabbiata", "price": 320, "veg": true, "available": true},
+    {"id": "r3-i3", "name": "Chicken Alfredo", "price": 420, "veg": false, "available": true},
+    {"id": "r3-i4", "name": "Garlic Bread", "price": 150, "veg": true, "available": true},
+    {"id": "r3-i5", "name": "Tiramisu", "price": 260, "veg": true, "available": true},
+    {"id": "r3-i6", "name": "Truffle Risotto", "price": 520, "veg": true, "available": false}
+  ]},
+  {"id": "r4", "name": "Green Bowl", "cuisine": "Salads", "cityId": "blr", "area": "Koramangala", "lat": 12.9279, "lon": 77.6271, "rating": 4.6, "avgPrepMinutes": 10, "menu": [
+    {"id": "r4-i1", "name": "Greek Salad", "price": 280, "veg": true, "available": true},
+    {"id": "r4-i2", "name": "Quinoa Power Bowl", "price": 340, "veg": true, "available": true},
+    {"id": "r4-i3", "name": "Grilled Chicken Salad", "price": 360, "veg": false, "available": true},
+    {"id": "r4-i4", "name": "Cold-pressed Juice", "price": 180, "veg": true, "available": true},
+    {"id": "r4-i5", "name": "Hummus & Pita", "price": 220, "veg": true, "available": true},
+    {"id": "r4-i6", "name": "Acai Bowl", "price": 390, "veg": true, "available": false}
+  ]},
+  {"id": "r5", "name": "Tandoor Tales", "cuisine": "North Indian", "cityId": "blr", "area": "Marathahalli", "lat": 12.9591, "lon": 77.6974, "rating": 4.2, "avgPrepMinutes": 25, "menu": [
+    {"id": "r5-i1", "name": "Paneer Butter Masala", "price": 290, "veg": true, "available": true},
+    {"id": "r5-i2", "name": "Dal Makhani", "price": 240, "veg": true, "available": true},
+    {"id": "r5-i3", "name": "Butter Chicken", "price": 360, "veg": false, "available": true},
+    {"id": "r5-i4", "name": "Butter Naan", "price": 60, "veg": true, "available": true},
+    {"id": "r5-i5", "name": "Jeera Rice", "price": 160, "veg": true, "available": true},
+    {"id": "r5-i6", "name": "Gulab Jamun", "price": 90, "veg": true, "available": false}
+  ]},
+  {"id": "r6", "name": "Wok This Way", "cuisine": "Chinese", "cityId": "blr", "area": "HSR Layout", "lat": 12.9121, "lon": 77.6446, "rating": 4.0, "avgPrepMinutes": 18, "menu": [
+    {"id": "r6-i1", "name": "Veg Hakka Noodles", "price": 220, "veg": true, "available": true},
+    {"id": "r6-i2", "name": "Chilli Chicken", "price": 300, "veg": false, "available": true},
+    {"id": "r6-i3", "name": "Veg Manchurian", "price": 240, "veg": true, "available": true},
+    {"id": "r6-i4", "name": "Schezwan Fried Rice", "price": 250, "veg": true, "available": true},
+    {"id": "r6-i5", "name": "Hot & Sour Soup", "price": 150, "veg": true, "available": true},
+    {"id": "r6-i6", "name": "Dim Sum Basket", "price": 320, "veg": false, "available": false}
+  ]},
+  {"id": "r7", "name": "Burger Barn", "cuisine": "Burgers", "cityId": "blr", "area": "HSR Layout", "lat": 12.9116, "lon": 77.6389, "rating": 4.1, "avgPrepMinutes": 15, "menu": [
+    {"id": "r7-i1", "name": "Classic Veg Burger", "price": 180, "veg": true, "available": true},
+    {"id": "r7-i2", "name": "Crispy Chicken Burger", "price": 240, "veg": false, "available": true},
+    {"id": "r7-i3", "name": "Loaded Fries", "price": 160, "veg": true, "available": true},
+    {"id": "r7-i4", "name": "Chocolate Shake", "price": 190, "veg": true, "available": true},
+    {"id": "r7-i5", "name": "Double Patty Burger", "price": 320, "veg": false, "available": true},
+    {"id": "r7-i6", "name": "Onion Rings", "price": 140, "veg": true, "available": false}
+  ]},
+  {"id": "r8", "name": "Sugar Rush", "cuisine": "Desserts", "cityId": "blr", "area": "Indiranagar", "lat": 12.9784, "lon": 77.6408, "rating": 4.7, "avgPrepMinutes": 10, "menu": [
+    {"id": "r8-i1", "name": "Death by Chocolate", "price": 280, "veg": true, "available": true},
+    {"id": "r8-i2", "name": "Red Velvet Pastry", "price": 160, "veg": true, "available": true},
+    {"id": "r8-i3", "name": "Belgian Waffle", "price": 220, "veg": true, "available": true},
+    {"id": "r8-i4", "name": "Kulfi Falooda", "price": 180, "veg": true, "available": true},
+    {"id": "r8-i5", "name": "Cheesecake Slice", "price": 260, "veg": true, "available": true},
+    {"id": "r8-i6", "name": "Brownie Sundae", "price": 240, "veg": true, "available": false}
+  ]},
+  {"id": "r9", "name": "Malabar Kitchen", "cuisine": "Kerala", "cityId": "blr", "area": "Bellandur", "lat": 12.9304, "lon": 77.6784, "rating": 4.4, "avgPrepMinutes": 22, "menu": [
+    {"id": "r9-i1", "name": "Appam & Stew", "price": 220, "veg": true, "available": true},
+    {"id": "r9-i2", "name": "Kerala Parotta", "price": 50, "veg": true, "available": true},
+    {"id": "r9-i3", "name": "Fish Curry Meals", "price": 320, "veg": false, "available": true},
+    {"id": "r9-i4", "name": "Beef Fry", "price": 300, "veg": false, "available": true},
+    {"id": "r9-i5", "name": "Avial", "price": 180, "veg": true, "available": true},
+    {"id": "r9-i6", "name": "Payasam", "price": 110, "veg": true, "available": false}
+  ]},
+  {"id": "r10", "name": "Nawab's Table", "cuisine": "Mughlai", "cityId": "blr", "area": "MG Road", "lat": 12.9756, "lon": 77.605, "rating": 4.3, "avgPrepMinutes": 30, "menu": [
+    {"id": "r10-i1", "name": "Galouti Kebab", "price": 380, "veg": false, "available": true},
+    {"id": "r10-i2", "name": "Nihari", "price": 420, "veg": false, "available": true},
+    {"id": "r10-i3", "name": "Shahi Paneer", "price": 300, "veg": true, "available": true},
+    {"id": "r10-i4", "name": "Sheermal", "price": 70, "veg": true, "available": true},
+    {"id": "r10-i5", "name": "Mutton Korma", "price": 440, "veg": false, "available": true},
+    {"id": "r10-i6", "name": "Phirni", "price": 120, "veg": true, "available": false}
+  ]},
+  {"id": "r11", "name": "Tokyo Box", "cuisine": "Japanese", "cityId": "blr", "area": "Whitefield", "lat": 12.9698, "lon": 77.75, "rating": 4.2, "avgPrepMinutes": 25, "menu": [
+    {"id": "r11-i1", "name": "Veg Sushi Platter", "price": 480, "veg": true, "available": true},
+    {"id": "r11-i2", "name": "Salmon Nigiri", "price": 620, "veg": false, "available": true},
+    {"id": "r11-i3", "name": "Chicken Ramen", "price": 450, "veg": false, "available": true},
+    {"id": "r11-i4", "name": "Edamame", "price": 220, "veg": true, "available": true},
+    {"id": "r11-i5", "name": "Miso Soup", "price": 180, "veg": true, "available": true},
+    {"id": "r11-i6", "name": "Matcha Ice Cream", "price": 240, "veg": true, "available": false}
+  ]},
+  {"id": "r12", "name": "Chaat Corner", "cuisine": "Street Food", "cityId": "blr", "area": "Jayanagar", "lat": 12.925, "lon": 77.5938, "rating": 4.5, "avgPrepMinutes": 8, "menu": [
+    {"id": "r12-i1", "name": "Pani Puri", "price": 60, "veg": true, "available": true},
+    {"id": "r12-i2", "name": "Pav Bhaji", "price": 140, "veg": true, "available": true},
+    {"id": "r12-i3", "name": "Vada Pav", "price": 40, "veg": true, "available": true},
+    {"id": "r12-i4", "name": "Sev Puri", "price": 80, "veg": true, "available": true},
+    {"id": "r12-i5", "name": "Masala Chai", "price": 30, "veg": true, "available": true},
+    {"id": "r12-i6", "name": "Kathi Roll", "price": 150, "veg": false, "available": false}
+  ]},
+  {"id": "r13", "name": "Udupi Upahara", "cuisine": "South Indian", "cityId": "blr", "area": "Malleshwaram", "lat": 13.0031, "lon": 77.5643, "rating": 4.6, "avgPrepMinutes": 12, "menu": [
+    {"id": "r13-i1", "name": "Masala Dosa", "price": 120, "veg": true, "available": true},
+    {"id": "r13-i2", "name": "Idli Vada Combo", "price": 90, "veg": true, "available": true},
+    {"id": "r13-i3", "name": "Rava Dosa", "price": 130, "veg": true, "available": true},
+    {"id": "r13-i4", "name": "Mini Meals", "price": 180, "veg": true, "available": true},
+    {"id": "r13-i5", "name": "Filter Coffee", "price": 40, "veg": true, "available": true},
+    {"id": "r13-i6", "name": "Ghee Pongal", "price": 110, "veg": true, "available": false}
+  ]},
+  {"id": "r14", "name": "Mangalore Pearl", "cuisine": "Coastal", "cityId": "blr", "area": "JP Nagar", "lat": 12.9063, "lon": 77.5857, "rating": 4.4, "avgPrepMinutes": 25, "menu": [
+    {"id": "r14-i1", "name": "Prawn Gassi", "price": 450, "veg": false, "available": true},
+    {"id": "r14-i2", "name": "Neer Dosa", "price": 90, "veg": true, "available": true},
+    {"id": "r14-i3", "name": "Fish Thali", "price": 380, "veg": false, "available": true},
+    {"id": "r14-i4", "name": "Kori Rotti", "price": 360, "veg": false, "available": true},
+    {"id": "r14-i5", "name": "Sol Kadhi", "price": 80, "veg": true, "available": true},
+    {"id": "r14-i6", "name": "Mangalore Buns", "price": 70, "veg": true, "available": false}
+  ]},
+  {"id": "r15", "name": "Late Night Wok", "cuisine": "Chinese", "cityId": "blr", "area": "Electronic City", "lat": 12.8452, "lon": 77.6602, "rating": 3.8, "avgPrepMinutes": 20, "menu": [
+    {"id": "r15-i1", "name": "Veg Hakka Noodles", "price": 220, "veg": true, "available": true},
+    {"id": "r15-i2", "name": "Chilli Chicken", "price": 300, "veg": false, "available": true},
+    {"id": "r15-i3", "name": "Veg Manchurian", "price": 240, "veg": true, "available": true},
+    {"id": "r15-i4", "name": "Schezwan Fried Rice", "price": 250, "veg": true, "available": true},
+    {"id": "r15-i5", "name": "Hot & Sour Soup", "price": 150, "veg": true, "available": true},
+    {"id": "r15-i6", "name": "Dim Sum Basket", "price": 320, "veg": false, "available": false}
+  ]},
+  {"id": "r16", "name": "Premium Pizza Co", "cuisine": "Italian", "cityId": "blr", "area": "Koramangala", "lat": 12.9345, "lon": 77.623, "rating": 4.8, "avgPrepMinutes": 28, "menu": [
+    {"id": "r16-i1", "name": "Margherita Pizza", "price": 630, "veg": true, "available": true},
+    {"id": "r16-i2", "name": "Penne Arrabbiata", "price": 576, "veg": true, "available": true},
+    {"id": "r16-i3", "name": "Chicken Alfredo", "price": 756, "veg": false, "available": true},
+    {"id": "r16-i4", "name": "Garlic Bread", "price": 270, "veg": true, "available": true},
+    {"id": "r16-i5", "name": "Tiramisu", "price": 468, "veg": true, "available": true},
+    {"id": "r16-i6", "name": "Truffle Risotto", "price": 936, "veg": true, "available": false}
+  ]},
+  {"id": "r17", "name": "Bandra Bites", "cuisine": "Burgers", "cityId": "mum", "area": "Bandra", "lat": 19.0596, "lon": 72.8295, "rating": 4.3, "avgPrepMinutes": 15, "menu": [
+    {"id": "r17-i1", "name": "Classic Veg Burger", "price": 180, "veg": true, "available": true},
+    {"id": "r17-i2", "name": "Crispy Chicken Burger", "price": 240, "veg": false, "available": true},
+    {"id": "r17-i3", "name": "Loaded Fries", "price": 160, "veg": true, "available": true},
+    {"id": "r17-i4", "name": "Chocolate Shake", "price": 190, "veg": true, "available": true},
+    {"id": "r17-i5", "name": "Double Patty Burger", "price": 320, "veg": false, "available": true},
+    {"id": "r17-i6", "name": "Onion Rings", "price": 140, "veg": true, "available": false}
+  ]},
+  {"id": "r18", "name": "Colaba Coastal", "cuisine": "Coastal", "cityId": "mum", "area": "Colaba", "lat": 18.9067, "lon": 72.8147, "rating": 4.6, "avgPrepMinutes": 25, "menu": [
+    {"id": "r18-i1", "name": "Prawn Gassi", "price": 450, "veg": false, "available": true},
+    {"id": "r18-i2", "name": "Neer Dosa", "price": 90, "veg": true, "available": true},
+    {"id": "r18-i3", "name": "Fish Thali", "price": 380, "veg": false, "available": true},
+    {"id": "r18-i4", "name": "Kori Rotti", "price": 360, "veg": false, "available": true},
+    {"id": "r18-i5", "name": "Sol Kadhi", "price": 80, "veg": true, "available": true},
+    {"id": "r18-i6", "name": "Mangalore Buns", "price": 70, "veg": true, "available": false}
+  ]},
+  {"id": "r19", "name": "Andheri Chaat House", "cuisine": "Street Food", "cityId": "mum", "area": "Andheri", "lat": 19.1136, "lon": 72.8697, "rating": 4.4, "avgPrepMinutes": 8, "menu": [
+    {"id": "r19-i1", "name": "Pani Puri", "price": 60, "veg": true, "available": true},
+    {"id": "r19-i2", "name": "Pav Bhaji", "price": 140, "veg": true, "available": true},
+    {"id": "r19-i3", "name": "Vada Pav", "price": 40, "veg": true, "available": true},
+    {"id": "r19-i4", "name": "Sev Puri", "price": 80, "veg": true, "available": true},
+    {"id": "r19-i5", "name": "Masala Chai", "price": 30, "veg": true, "available": true},
+    {"id": "r19-i6", "name": "Kathi Roll", "price": 150, "veg": false, "available": false}
+  ]},
+  {"id": "r20", "name": "Powai Pasta Bar", "cuisine": "Italian", "cityId": "mum", "area": "Powai", "lat": 19.1176, "lon": 72.906, "rating": 4.1, "avgPrepMinutes": 20, "menu": [
+    {"id": "r20-i1", "name": "Margherita Pizza", "price": 350, "veg": true, "available": true},
+    {"id": "r20-i2", "name": "Penne Arrabbiata", "price": 320, "veg": true, "available": true},
+    {"id": "r20-i3", "name": "Chicken Alfredo", "price": 420, "veg": false, "available": true},
+    {"id": "r20-i4", "name": "Garlic Bread", "price": 150, "veg": true, "available": true},
+    {"id": "r20-i5", "name": "Tiramisu", "price": 260, "veg": true, "available": true},
+    {"id": "r20-i6", "name": "Truffle Risotto", "price": 520, "veg": true, "available": false}
+  ]},
+  {"id": "r21", "name": "Juhu Biryani House", "cuisine": "Hyderabadi", "cityId": "mum", "area": "Juhu", "lat": 19.1075, "lon": 72.8263, "rating": 4.2, "avgPrepMinutes": 25, "menu": [
+    {"id": "r21-i1", "name": "Chicken Dum Biryani", "price": 320, "veg": false, "available": true},
+    {"id": "r21-i2", "name": "Mutton Biryani", "price": 420, "veg": false, "available": true},
+    {"id": "r21-i3", "name": "Veg Dum Biryani", "price": 240, "veg": true, "available": true},
+    {"id": "r21-i4", "name": "Double Ka Meetha", "price": 120, "veg": true, "available": true},
+    {"id": "r21-i5", "name": "Mirchi Ka Salan", "price": 90, "veg": true, "available": true},
+    {"id": "r21-i6", "name": "Haleem", "price": 350, "veg": false, "available": false}
+  ]},
+  {"id": "r22", "name": "Marine Drive Desserts", "cuisine": "Desserts", "cityId": "mum", "area": "Churchgate", "lat": 18.9322, "lon": 72.8264, "rating": 4.7, "avgPrepMinutes": 10, "menu": [
+    {"id": "r22-i1", "name": "Death by Chocolate", "price": 280, "veg": true, "available": true},
+    {"id": "r22-i2", "name": "Red Velvet Pastry", "price": 160, "veg": true, "available": true},
+    {"id": "r22-i3", "name": "Belgian Waffle", "price": 220, "veg": true, "available": true},
+    {"id": "r22-i4", "name": "Kulfi Falooda", "price": 180, "veg": true, "available": true},
+    {"id": "r22-i5", "name": "Cheesecake Slice", "price": 260, "veg": true, "available": true},
+    {"id": "r22-i6", "name": "Brownie Sundae", "price": 240, "veg": true, "available": false}
+  ]}
+]

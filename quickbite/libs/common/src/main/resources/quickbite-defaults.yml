@@ -1,4 +1,13 @@
 spring:
+  data:
+    redis:
+      # A cache MUST fail faster than the store it fronts. Lettuce's default command timeout is 60 s,
+      # so without these an unreachable Redis turns every request into a 60 s hang instead of a fast
+      # fallback to the database. (Each service still sets its own spring.data.redis.host.)
+      timeout: 300ms           # command timeout
+      connect-timeout: 300ms
+      lettuce:
+        shutdown-timeout: 100ms
   threads:
     virtual:
       enabled: true            # blocking I/O on virtual threads: thread-per-request without the thread cost

@@ -23,6 +23,7 @@ With **cache-aside**, the application checks Redis first. On a miss it loads fro
 | **Stampede / thundering herd** | A hot key expires and 1,000 concurrent requests all miss and hit Mongo together | A **single-flight lock**: `SET key:lock NX EX 5`. One request rebuilds; the others wait ~25 ms and re-read. |
 | **Synchronized expiry** | Keys written together all expire together, causing a periodic DB spike | **TTL jitter**: 60 s + random(0–15 s) |
 | **Cache outage = total outage** | Redis down makes every request error | Redis errors are caught and we **fall back to the DB**. The cache is an optimization, never a dependency. |
+| **Slow cache = slow everything** | An unreachable Redis blocks each call for Lettuce's default 60 s timeout, so the fallback arrives far too late | **300 ms client timeouts** (`spring.data.redis.timeout` / `connect-timeout`, in `quickbite-defaults.yml`, file 02) |
 
 ### Why order-svc will NOT read prices from the cache
 
@@ -721,7 +722,13 @@ curl -si -X PUT -H "Authorization: Bearer $ALICE" -H 'Content-Type: application/
 curl -s -H "Authorization: Bearer $ALICE" "localhost:8081/actuator/metrics/catalog.cache" | jq
 
 # H) Fail-open: stop Redis, the catalog still answers (slower, straight from Mongo)
-docker stop quickbite-redis-1 && curl -s localhost:8081/api/restaurants | jq length && docker start quickbite-redis-1   # still 16
+docker stop quickbite-redis-1
+# Keep the body and the timing apart: curl's -w output is NOT JSON, so it must not go into jq.
+curl -sS -o /tmp/r.json -w 'code=%{http_code} time=%{time_total}s\n' localhost:8081/api/restaurants
+jq length /tmp/r.json                                                                    # 16, in well under 1 s
+docker start quickbite-redis-1
+#   If this HANGS instead: the Redis timeouts from file 02 are missing from quickbite-defaults.yml.
+#   Without them Lettuce waits 60 s per command before the fallback can run.
 ```
 
 | Check | Pass condition |
@@ -730,7 +737,7 @@ docker stop quickbite-redis-1 && curl -s localhost:8081/api/restaurants | jq len
 | C | `MISS`, then `HIT` |
 | D | `304` |
 | E/F | `204` and key gone / `403` |
-| H | Still returns 16 (logs show "cache read failed, falling back to DB") |
+| H | Still returns 16, in **under a second** (logs show "cache read failed, falling back to DB") |
 
 **Checkpoint:**
 

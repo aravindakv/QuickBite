@@ -12,7 +12,7 @@ rootProject.name = "quickbite"
 include(
     "libs:common",
     "services:gateway",
-    // "services:catalog-svc",
+    "services:catalog-svc",
     // "services:order-svc",
     // "services:payment-svc",
     // "services:location-svc",
