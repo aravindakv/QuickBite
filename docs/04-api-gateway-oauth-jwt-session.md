@@ -87,6 +87,8 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: 6379
+      timeout: 300ms          # fail fast: the session check and rate limiter must never hang on Redis
+      connect-timeout: 300ms
   cloud:
     gateway:
       server:
@@ -1492,7 +1494,7 @@ curl -s -X POST localhost:8080/api/payments/methods -H "$A" -H "$J" \
 # Header flood:
 curl -s -o /dev/null -w "%{http_code}\n" $(for i in $(seq 1 70); do printf -- "-H X-Junk-%s:1 " $i; done) localhost:8080/api/restaurants   # 431
 # Cross-site WebSocket hijacking attempt:
-websocat -H "Origin: https://evil.example" -H "$A" ws://localhost:8080/ws/updates     # rejected (403)
+websocat ws://localhost:8080/ws/updates -H="Origin: https://evil.example" -H="$A"     # rejected (403)
 
 # Regression: a valid order still works
 c -X POST localhost:8080/api/orders -H "$A" -H "$J" -H "Idempotency-Key: $(uuidgen)" -d "$ORDER"   # 201

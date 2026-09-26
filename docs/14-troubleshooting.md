@@ -25,6 +25,8 @@ curl -sS -X POST http://localhost:8180/realms/quickbite/protocol/openid-connect/
 | `"Account disabled"` / `"Account temporarily disabled"` | Brute-force protection locked the user after failed attempts | Wait ~1 min, or admin console → Users → alice → *Enabled*; or recreate the container |
 | HTTP 200, but `aud`/`sid` missing when decoded | Realm imported from an older JSON | Recreate the Keycloak container so the current realm file is imported |
 
+> **"Do I need production mode to get real tokens?"** No. `start-dev` issues real signed JWTs. Production mode (file 17) is about HTTPS, a real database and hardening, not about token validity.
+
 > **Why recreating works:** in `start-dev` mode Keycloak keeps its database *inside the container*, and `--import-realm` only imports a realm that doesn't exist yet. Removing the container discards the old realm, and the next start re-imports the JSON.
 
 ## Authentication and tokens
@@ -38,6 +40,14 @@ curl -sS -X POST http://localhost:8180/realms/quickbite/protocol/openid-connect/
 | `403` although you're logged in | Missing role: realm roles aren't mapped | Decode the token and check `realm_access.roles`; confirm `realmRoles` in the realm JSON. Remember `hasRole('rider')` expects `ROLE_rider`. |
 | Realm changes ignored | The import runs only if the realm doesn't exist | `docker compose rm -sf keycloak && docker compose up -d keycloak` (dev mode keeps data in the container). |
 | Order-svc → location-svc `401`/`403` | The service-account token lacks the `service` role, or the secret is wrong | Test the client credentials with the curl in file 03; check `ORDER_SVC_SECRET`. |
+
+## Redis and caching
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| A request hangs ~60 s (or curl times out) after you stop Redis | Lettuce's default 60 s command timeout: the code's fallback can't run until it expires | Add `spring.data.redis.timeout: 300ms` and `connect-timeout: 300ms` (shared in `quickbite-defaults.yml`, file 02; the gateway sets its own) |
+| Gateway requests hang when Redis is down | Same, on the session check / rate limiter | Same timeouts in the gateway's `application.yml` |
+| `curl -s ... \| jq` prints nothing at all | `-s` hides curl's error and `jq` prints nothing for empty input | Re-run with `curl -sS -i --max-time 20` |
 
 ## Gateway input validation (file 04, step 5)
 
@@ -92,6 +102,7 @@ curl -sS -X POST http://localhost:8180/realms/quickbite/protocol/openid-connect/
 | `CLEARTEXT communication not permitted` | The network security config is missing or has the wrong domain | Check `android:networkSecurityConfig` in the manifest and `localhost` in the XML. |
 | Redirect after login doesn't return to the app | Redirect URI mismatch | `manifestPlaceholders["appAuthRedirectScheme"] = "com.quickbite.app"` and Keycloak `redirectUris` = `com.quickbite.app:/oauth2redirect`, **exactly**. |
 | `Invalid parameter: redirect_uri` on the Keycloak page | Same as above, on the Keycloak side | Fix the realm JSON and re-import. |
+| `websocat: No URL specified` | `-H` consumed the URL as another header value | Put the URL first: `websocat ws://localhost:8000/ws/updates -H="Authorization: Bearer $TOKEN"` |
 | App works, but there are no live updates | WebSocket blocked or not authorized | `adb logcat \| grep -i websocket`; test with `websocat` from the laptop; check the NGINX `/ws/` block. |
 | Map is grey | OSM tiles blocked, or no user agent | Check internet on the device; `Configuration.getInstance().userAgentValue` is set in `QuickBiteApp`. |
 | Chrome on the device can't reach `localhost:8000` | `adb reverse` lost, or NGINX down | `adb reverse --list`; `curl localhost:8000/nginx-health` on the laptop. |

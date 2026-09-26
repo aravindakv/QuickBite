@@ -714,12 +714,14 @@ The script uses REST; the Android rider mode (file 10) uses the WebSocket. Both 
 
 Start all six services (gateway, catalog, order, payment, location, realtime) with `bootRun` in separate terminals, or wait for file 09 to run them in Docker.
 
-Install `websocat` (`brew install websocat`) to act as a WebSocket client.
+Install `websocat` (`brew install websocat`, or `cargo install websocat`) to act as a WebSocket client.
+
+> **Put the URL first.** `-H` takes multiple values, so `websocat -H "..." ws://...` swallows the URL as a second header and fails with *"No URL specified"*. Use `websocat <url> -H="<header>"` (with the `=`), or `--header="..."`.
 
 ```bash
-# Terminal A: alice listens for live updates
+# Terminal A: alice listens for live updates (tokens last 5 min: get a fresh one right before connecting)
 ALICE=$(scripts/token.sh alice alice)
-websocat -H "Authorization: Bearer $ALICE" ws://localhost:8000/ws/updates
+websocat ws://localhost:8000/ws/updates -H="Authorization: Bearer $ALICE"
 
 # Terminal B: bob comes online
 scripts/rider-sim.sh
@@ -751,7 +753,7 @@ docker exec -it quickbite-redis-1 redis-cli --scan --pattern 'rider:busy:*'   # 
 curl -s -H "Authorization: Bearer $ALICE" localhost:8000/api/payments/orders/<ORDER_ID> | jq .status   # CAPTURED
 
 # Security: a customer cannot open the rider ingest socket
-websocat -H "Authorization: Bearer $ALICE" ws://localhost:8000/ws/rider     # closed: "riders only"
+websocat ws://localhost:8000/ws/rider -H="Authorization: Bearer $ALICE"     # closed: "riders only"
 
 # Internal APIs are not reachable from outside
 curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $ALICE" "localhost:8000/internal/riders/nearest?lat=1&lon=1"  # 403 at gateway
