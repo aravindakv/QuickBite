@@ -19,14 +19,14 @@ public class CorrelationFilter extends OncePerRequestFilter
         if(cid == null || cid.isEmpty()) {
             cid = java.util.UUID.randomUUID().toString();
         }
-        MDC.put(Headers.SESSION_ID, sid == null ? "-" : sid);
-        MDC.put(Headers.CORRELATION_ID, cid);
+        MDC.put(Headers.MDC_SESSION, sid == null ? "-" : sid);
+        MDC.put(Headers.MDC_CORRELATION, cid);
         res.setHeader(Headers.CORRELATION_ID, cid);
         try {
             chain.doFilter(req, res);
         } finally {
-            MDC.remove(Headers.SESSION_ID);
-            MDC.remove(Headers.CORRELATION_ID);
+            MDC.remove(Headers.MDC_SESSION);
+            MDC.remove(Headers.MDC_CORRELATION);
         }
     }
 }

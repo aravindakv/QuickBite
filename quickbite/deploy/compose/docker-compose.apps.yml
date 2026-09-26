@@ -1,0 +1,82 @@
+x-app-env: &app-env
+  KAFKA_BOOTSTRAP: kafka:19092
+  REDIS_HOST: redis
+  DB_HOST: postgres
+  MONGO_URI: mongodb://mongo:27017/catalog
+  KC_ISSUER: http://localhost:8180/realms/quickbite                                  # PUBLIC url (token "iss")
+  KC_JWKS: http://keycloak:8180/realms/quickbite/protocol/openid-connect/certs       # INTERNAL url (keys)
+  KC_TOKEN_URI: http://keycloak:8180/realms/quickbite/protocol/openid-connect/token
+  CATALOG_URL: http://catalog-svc:8081
+  LOCATION_URL: http://location-svc:8084
+
+x-app: &app
+  restart: unless-stopped
+  init: false                    # tini is already PID 1 inside the image
+  deploy:
+    resources:
+      limits:
+        memory: 512m             # heap ~384m via MaxRAMPercentage
+        cpus: "1.0"
+  depends_on:
+    postgres: { condition: service_healthy }
+    mongo:    { condition: service_healthy }
+    redis:    { condition: service_healthy }
+    kafka:    { condition: service_healthy }
+    keycloak: { condition: service_healthy }
+
+services:
+  gateway:
+    <<: *app
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile, args: { JAR_FILE: services/gateway/build/libs/app.jar } }
+    image: quickbite/gateway:dev
+    ports: ["8080:8080"]
+    environment:
+      <<: *app-env
+      CATALOG_URL: http://catalog-svc:8081
+      ORDER_URL: http://order-svc:8082
+      PAYMENT_URL: http://payment-svc:8083
+      LOCATION_URL: http://location-svc:8084
+      LOCATION_WS_URL: ws://location-svc:8084
+      REALTIME_WS_URL: ws://realtime-svc:8085
+    healthcheck: { test: ["CMD", "curl", "-fs", "http://localhost:8080/actuator/health/readiness"], interval: 10s, retries: 12, start_period: 20s }
+
+  catalog-svc:
+    <<: *app
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile, args: { JAR_FILE: services/catalog-svc/build/libs/app.jar } }
+    image: quickbite/catalog-svc:dev
+    environment: { <<: *app-env, NODE_ID: "1" }
+    healthcheck: { test: ["CMD", "curl", "-fs", "http://localhost:8081/actuator/health/readiness"], interval: 10s, retries: 12, start_period: 20s }
+
+  order-svc:
+    <<: *app
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile, args: { JAR_FILE: services/order-svc/build/libs/app.jar } }
+    image: quickbite/order-svc:dev
+    environment: { <<: *app-env, NODE_ID: "2" }
+    healthcheck: { test: ["CMD", "curl", "-fs", "http://localhost:8082/actuator/health/readiness"], interval: 10s, retries: 12, start_period: 20s }
+
+  payment-svc:
+    <<: *app
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile, args: { JAR_FILE: services/payment-svc/build/libs/app.jar } }
+    image: quickbite/payment-svc:dev
+    environment: { <<: *app-env, NODE_ID: "3" }
+    healthcheck: { test: ["CMD", "curl", "-fs", "http://localhost:8083/actuator/health/readiness"], interval: 10s, retries: 12, start_period: 20s }
+
+  location-svc:
+    <<: *app
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile, args: { JAR_FILE: services/location-svc/build/libs/app.jar } }
+    image: quickbite/location-svc:dev
+    environment: { <<: *app-env, NODE_ID: "4" }
+    healthcheck: { test: ["CMD", "curl", "-fs", "http://localhost:8084/actuator/health/readiness"], interval: 10s, retries: 12, start_period: 20s }
+
+  realtime-svc:
+    <<: *app
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile, args: { JAR_FILE: services/realtime-svc/build/libs/app.jar } }
+    image: quickbite/realtime-svc:dev
+    environment: { <<: *app-env, NODE_ID: "5" }
+    healthcheck: { test: ["CMD", "curl", "-fs", "http://localhost:8085/actuator/health/readiness"], interval: 10s, retries: 12, start_period: 20s }
+
+  nginx:
+    environment:
+      GATEWAY_UPSTREAM: gateway:8080          # now the gateway is a container, not your IDE
+    depends_on:
+      gateway: { condition: service_healthy }

@@ -1,5 +1,7 @@
 package com.quickbite.order.api;
 
+import com.quickbite.common.context.Headers;
+import com.quickbite.common.context.RequestContext;
 import com.quickbite.order.app.*;
 import com.quickbite.order.domain.*;
 import jakarta.validation.Valid;
@@ -26,12 +28,19 @@ public class OrderController {
         this.service = service; this.repo = repo; this.debug = debug;
     }
 
+    /** The gateway sets these headers; capture them HERE, where they are certain to be present. */
+    private static RequestContext ctx(String sessionId, String correlationId) {
+        return RequestContext.of(sessionId, correlationId);
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('customer')")
     public ResponseEntity<OrderResponse> place(@AuthenticationPrincipal Jwt jwt,
+                                               @RequestHeader(value = Headers.SESSION_ID, required = false) String sid,
+                                               @RequestHeader(value = Headers.CORRELATION_ID, required = false) String cid,
                                                @RequestHeader(value = "Idempotency-Key", required = false) String key,
                                                @Valid @RequestBody PlaceOrderRequest req) {
-        Order o = service.place(jwt.getSubject(), req, key);
+        Order o = service.place(jwt.getSubject(), req, key, ctx(sid, cid));
         return ResponseEntity.created(URI.create("/api/orders/" + o.getId())).body(OrderResponse.from(o));
     }
 
@@ -44,7 +53,6 @@ public class OrderController {
     public OrderResponse get(@PathVariable long id, @AuthenticationPrincipal Jwt jwt, Authentication auth) {
         Order o = repo.findById(id).orElseThrow(() -> new NoSuchElementException("order " + id));
         boolean admin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"));
-        // Object-level authorization: stops "BOLA" (alice reading bob's order by guessing ids)
         if (!o.visibleTo(jwt.getSubject(), admin)) throw new AccessDeniedException("not your order");
         return OrderResponse.from(o);
     }
@@ -59,17 +67,21 @@ public class OrderController {
 
     @PostMapping("/{id}/pickup")
     @PreAuthorize("hasRole('rider')")
-    public OrderResponse pickup(@PathVariable long id, @AuthenticationPrincipal Jwt jwt) {
-        return OrderResponse.from(service.riderAction(id, jwt.getSubject(), OrderStatus.PICKED_UP));
+    public OrderResponse pickup(@PathVariable long id, @AuthenticationPrincipal Jwt jwt,
+                                @RequestHeader(value = Headers.SESSION_ID, required = false) String sid,
+                                @RequestHeader(value = Headers.CORRELATION_ID, required = false) String cid) {
+        return OrderResponse.from(service.riderAction(id, jwt.getSubject(), OrderStatus.PICKED_UP, ctx(sid, cid)));
     }
 
     @PostMapping("/{id}/deliver")
     @PreAuthorize("hasRole('rider')")
-    public OrderResponse deliver(@PathVariable long id, @AuthenticationPrincipal Jwt jwt) {
-        return OrderResponse.from(service.riderAction(id, jwt.getSubject(), OrderStatus.DELIVERED));
+    public OrderResponse deliver(@PathVariable long id, @AuthenticationPrincipal Jwt jwt,
+                                 @RequestHeader(value = Headers.SESSION_ID, required = false) String sid,
+                                 @RequestHeader(value = Headers.CORRELATION_ID, required = false) String cid) {
+        return OrderResponse.from(service.riderAction(id, jwt.getSubject(), OrderStatus.DELIVERED, ctx(sid, cid)));
     }
 
-    /** Chaos helper for file 09/11: freezes the dispatcher loop. */
+    /** Chaos helper (file 09/11): freezes the dispatcher loop. */
     @PostMapping("/admin/debug/hang")
     @PreAuthorize("hasRole('admin')")
     public String hang(@RequestParam boolean on) { debug.setHang(on); return "dispatcher hang=" + on; }
