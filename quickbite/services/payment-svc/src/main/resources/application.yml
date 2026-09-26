@@ -1,0 +1,53 @@
+spring:
+  config:
+    import: classpath:quickbite-defaults.yml
+  application:
+    name: payment-svc
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/payments
+    username: quickbite
+    password: quickbite
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  kafka:
+    consumer:
+      group-id: payment-svc
+  cloud:
+    circuitbreaker:
+      resilience4j:
+        disable-thread-pool: true
+
+server:
+  port: 8083
+
+management:
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: readinessState,db
+
+quickbite:
+  outbox:
+    enabled: true
+  psp:
+    latency-ms: 150
+    failure-rate: 0.0      # global infrastructure fault injection (admin endpoint changes it at runtime)
+  seed:
+    cards: ${SEED_CARDS:true}          # pre-load test cards for alice/admin; false in production
+  test-cards:
+    enabled: ${TEST_CARDS_ENABLED:true} # exposes GET /api/payments/test-cards for the app's debug quick-fill
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      psp:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        slow-call-duration-threshold: 2s
+        slow-call-rate-threshold: 60
+        wait-duration-in-open-state: 20s
+        permitted-number-of-calls-in-half-open-state: 3

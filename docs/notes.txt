@@ -1,0 +1,9 @@
+Firewall to not to block nginx
+
+sudo ufw allow from 172.17.0.0/16 to any port 8080 proto tcp
+sudo ufw allow from 172.18.0.0/16 to any port 8080 proto tcp
+sudo ufw reload
+docker exec quickbite-nginx-1 sh -c 'nc -z -w3 host.docker.internal 8080 && echo reachable || echo "no answer"'
+
+
+
