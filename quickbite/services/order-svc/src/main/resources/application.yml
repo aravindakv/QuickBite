@@ -1,0 +1,58 @@
+spring:
+  config:
+    import: classpath:quickbite-defaults.yml
+  application:
+    name: order-svc
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/orders
+    username: quickbite
+    password: quickbite
+    hikari:
+      maximum-pool-size: 10        # small pools are FASTER (less contention); measure in file 12
+  jpa:
+    open-in-view: false            # no lazy loading in controllers -> no hidden queries after the tx
+    hibernate:
+      ddl-auto: validate           # Flyway owns the schema; Hibernate only checks it
+  kafka:
+    consumer:
+      group-id: order-svc
+  cloud:
+    circuitbreaker:
+      resilience4j:
+        disable-thread-pool: true  # run on the caller's thread -> MDC (session id) survives; timeouts come from the HTTP client
+
+server:
+  port: 8082
+
+management:
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: readinessState,db
+
+quickbite:
+  outbox:
+    enabled: true
+  catalog-url: ${CATALOG_URL:http://localhost:8081}
+  location-url: ${LOCATION_URL:http://localhost:8084}
+  service-auth:
+    client-id: order-svc
+    client-secret: ${ORDER_SVC_SECRET:order-svc-secret}
+  dispatch:
+    interval-ms: 3000
+    radius-km: 5
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      catalog:
+        sliding-window-size: 20
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+      location:
+        sliding-window-size: 20
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
