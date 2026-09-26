@@ -1,0 +1,23 @@
+spring:
+  config:
+    import: classpath:quickbite-defaults.yml
+  application:
+    name: realtime-svc
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+
+server:
+  port: 8085
+
+management:
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: readinessState,redis
+
+quickbite:
+  realtime:
+    # A UNIQUE consumer group per instance = every instance receives every event (broadcast fan-out)
+    group: realtime-${random.uuid}

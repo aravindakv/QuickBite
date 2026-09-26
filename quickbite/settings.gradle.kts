@@ -15,6 +15,6 @@ include(
     "services:catalog-svc",
     "services:order-svc",
     "services:payment-svc",
-    // "services:location-svc",
-    // "services:realtime-svc",
+    "services:location-svc",
+    "services:realtime-svc",
 )

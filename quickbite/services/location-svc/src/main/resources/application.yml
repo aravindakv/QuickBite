@@ -1,0 +1,27 @@
+spring:
+  config:
+    import: classpath:quickbite-defaults.yml
+  application:
+    name: location-svc
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+  kafka:
+    consumer:
+      group-id: location-svc
+
+server:
+  port: 8084
+
+management:
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: readinessState,redis
+
+quickbite:
+  city: blr
+  rider:
+    alive-ttl: 30s        # rider must report at least every 30 s to be dispatchable
+    claim-ttl: 3h
