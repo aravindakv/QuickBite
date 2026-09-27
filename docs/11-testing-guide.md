@@ -571,9 +571,19 @@ void consumerCanReadContract() throws Exception {
 #!/usr/bin/env bash
 # Runs against the containerized stack (scripts/up.sh). Exit code 0 = all passed.
 set -uo pipefail
-API=http://localhost:8000; PASS=0; FAIL=0
+API=${API:-http://localhost:8000}; PASS=0; FAIL=0; SKIP=0
 check() { if [ "$2" = "$3" ]; then echo "  ✔ $1"; PASS=$((PASS+1)); else echo "  ✘ $1 (expected $3, got $2)"; FAIL=$((FAIL+1)); fi; }
+skip()  { echo "  ~ $1 (skipped: $2)"; SKIP=$((SKIP+1)); }
 code() { curl -s -o /dev/null -w "%{http_code}" "$@"; }
+
+# Works against Compose (file 09) or Kubernetes (file 12); database checks are skipped if neither is reachable.
+if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx quickbite-postgres-1; then
+  PG=(docker exec quickbite-postgres-1)
+elif kubectl get pod postgres-0 -n quickbite >/dev/null 2>&1; then
+  PG=(kubectl exec -n quickbite postgres-0 --)
+else
+  PG=()
+fi
 
 ALICE=$(scripts/token.sh alice alice); BOB=$(scripts/token.sh bob bob); ADMIN=$(scripts/token.sh admin admin)
 ORDER_BODY='{"restaurantId":"r1","items":[{"menuItemId":"r1-i1","quantity":1}],"deliveryLat":12.9279,"deliveryLon":77.6271}'
@@ -617,7 +627,11 @@ ADMIN_PM=$(curl -s -H "Authorization: Bearer $ADMIN" $API/api/payments/methods |
 X=$(order_with "$ADMIN_PM"); sleep 4
 check "other user's card rejected" "$(curl -s -H "Authorization: Bearer $ALICE" $API/api/payments/orders/$X | jq -r .failureReason)" NO_PAYMENT_METHOD
 # Dump the ENTIRE payments database and search for a full card number: must never appear
-check "no PAN anywhere in DB"      "$(docker exec quickbite-postgres-1 pg_dump -U quickbite payments | grep -c 4242424242424242)" 0
+if [ ${#PG[@]} -gt 0 ]; then
+  check "no PAN anywhere in DB"    "$("${PG[@]}" pg_dump -U quickbite payments | grep -c 4242424242424242)" 0
+else
+  skip  "no PAN anywhere in DB"    "no reachable Postgres (Compose down, no postgres-0 pod)"
+fi
 check "sold-out item -> 409"       "$(code -X POST -H "Authorization: Bearer $ALICE" -H 'Content-Type: application/json' \
   -d '{"restaurantId":"r1","items":[{"menuItemId":"r1-i6","quantity":1}],"deliveryLat":12.93,"deliveryLon":77.62}' $API/api/orders)" 409
 
@@ -636,7 +650,7 @@ T=$(scripts/token.sh alice alice)
 curl -s -X POST -H "Authorization: Bearer $T" $API/api/auth/logout >/dev/null
 check "revoked token -> 401"       "$(code -H "Authorization: Bearer $T" $API/api/orders)" 401
 
-echo; echo "PASSED: $PASS  FAILED: $FAIL"; [ $FAIL -eq 0 ]
+echo; echo "PASSED: $PASS  FAILED: $FAIL  SKIPPED: $SKIP"; [ $FAIL -eq 0 ]
 ```
 
 ```bash

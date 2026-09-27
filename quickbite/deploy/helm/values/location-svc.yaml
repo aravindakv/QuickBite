@@ -1,0 +1,3 @@
+image: { repository: quickbite/location-svc }
+port: 8084
+replicas: 2

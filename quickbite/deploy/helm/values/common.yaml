@@ -1,0 +1,10 @@
+env:
+  KAFKA_BOOTSTRAP: my-cluster-kafka-bootstrap.kafka.svc:9092
+  REDIS_HOST: redis
+  DB_HOST: postgres
+  MONGO_URI: mongodb://mongo:27017/catalog
+  KC_ISSUER: http://localhost:8180/realms/quickbite
+  KC_JWKS: http://keycloak:8180/realms/quickbite/protocol/openid-connect/certs
+  KC_TOKEN_URI: http://keycloak:8180/realms/quickbite/protocol/openid-connect/token
+  CATALOG_URL: http://catalog-svc:8081
+  LOCATION_URL: http://location-svc:8084

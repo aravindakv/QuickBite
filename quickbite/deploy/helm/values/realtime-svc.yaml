@@ -1,0 +1,6 @@
+image: { repository: quickbite/realtime-svc }
+port: 8085
+replicas: 2
+resources:                      # connection-heavy: memory matters more than CPU
+  requests: { cpu: 250m, memory: 512Mi }
+  limits:   { cpu: "1",  memory: 768Mi }

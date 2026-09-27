@@ -1,0 +1,8 @@
+image: { repository: quickbite/gateway }
+port: 8080
+env:
+  ORDER_URL: http://order-svc:8082
+  PAYMENT_URL: http://payment-svc:8083
+  LOCATION_WS_URL: ws://location-svc:8084
+  REALTIME_WS_URL: ws://realtime-svc:8085
+hpa: { enabled: true, min: 2, max: 6, cpuPercent: 70 }

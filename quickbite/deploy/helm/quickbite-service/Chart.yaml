@@ -1,0 +1,4 @@
+apiVersion: v2
+name: quickbite-service
+description: Generic chart for QuickBite Spring Boot services
+version: 0.1.0

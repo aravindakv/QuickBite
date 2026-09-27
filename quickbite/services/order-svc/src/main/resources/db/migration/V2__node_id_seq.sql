@@ -1,0 +1,1 @@
+create sequence snowflake_node_seq;

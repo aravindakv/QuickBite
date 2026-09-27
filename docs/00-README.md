@@ -63,6 +63,7 @@ Payment uses alice's saved card. Pick a **decline test card** in the app and ste
 | 18 | `18-capacity-sizing.md` | **Capacity sizing:** CPU/memory/cache/storage/network servers per service for a 10-year horizon, computed by `scripts/capacity_model.py` | 6 |
 | 19 | `19-fix-context-propagation.md` | **Fix:** session-id / correlation-id reaching the outbox and Kafka headers (explicit `RequestContext` instead of MDC) | 1, 10 |
 | 20 | `20-live-rider-path.md` | **Live rider path:** track API (Redis trail + ownership check), polyline on the map, ETA, offline-demo support, capacity impact | 2, 6, 7 |
+| 21 | `21-browser-consoles.md` | **Browser consoles:** Kafka UI, Adminer (Postgres), mongo-express, RedisInsight, Keycloak admin, Spark UI, actuators | – |
 
 Topic numbers match your original list (1 = services + session-id … 11 = horizontal/vertical scaling).
 

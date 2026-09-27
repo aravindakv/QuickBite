@@ -1,0 +1,10 @@
+image: { repository: quickbite/unknown, tag: dev, pullPolicy: IfNotPresent }
+replicas: 2
+port: 8080
+env: {}                 # map of NAME: value
+envFromSecret: ""       # optional Secret name
+resources:
+  requests: { cpu: 250m, memory: 384Mi }
+  limits:   { cpu: "1",  memory: 512Mi }
+hpa: { enabled: false, min: 2, max: 6, cpuPercent: 70 }
+pdb: { minAvailable: 1 }

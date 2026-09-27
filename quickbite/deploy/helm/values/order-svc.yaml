@@ -1,0 +1,4 @@
+image: { repository: quickbite/order-svc }
+port: 8082
+envFromSecret: order-svc-secret
+hpa: { enabled: true, min: 2, max: 6, cpuPercent: 70 }
