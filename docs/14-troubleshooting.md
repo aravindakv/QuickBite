@@ -41,6 +41,8 @@ curl -sS -X POST http://localhost:8180/realms/quickbite/protocol/openid-connect/
 | Realm changes ignored | The import runs only if the realm doesn't exist | `docker compose rm -sf keycloak && docker compose up -d keycloak` (dev mode keeps data in the container). |
 | Order-svc → location-svc `401`/`403` | The service-account token lacks the `service` role, or the secret is wrong | Test the client credentials with the curl in file 03; check `ORDER_SVC_SECRET`. |
 
+| Kafka headers `sessionId:` / `correlationId:` empty, `outbox` columns NULL | The MDC (a ThreadLocal) was empty at the INSERT, even though the filter ran | Pass the ids explicitly: file 19 |
+
 ## Redis and caching
 
 | Symptom | Likely cause | Fix |
@@ -104,8 +106,29 @@ curl -sS -X POST http://localhost:8180/realms/quickbite/protocol/openid-connect/
 | `Invalid parameter: redirect_uri` on the Keycloak page | Same as above, on the Keycloak side | Fix the realm JSON and re-import. |
 | `websocat: No URL specified` | `-H` consumed the URL as another header value | Put the URL first: `websocat ws://localhost:8000/ws/updates -H="Authorization: Bearer $TOKEN"` |
 | App works, but there are no live updates | WebSocket blocked or not authorized | `adb logcat \| grep -i websocket`; test with `websocat` from the laptop; check the NGINX `/ws/` block. |
+| Login never asks for credentials (after logout or `pm clear`) | Keycloak's SSO cookie lives in Chrome, outside the app's storage | `.setPrompt("login")` on the authorization request, and RP-initiated logout via `EndSessionRequest` (file 10) |
+| Login fails with `Invalid ID Token`, cause `Issuer must be an https URL` | AppAuth always requires an https issuer before validating an ID token, whatever the connection builder allows | `.setSkipIssuerHttpsCheck(BuildConfig.DEBUG)` on `AppAuthConfiguration` (file 10), or move Keycloak behind TLS (file 17) |
+| `Unable to create converter for java.util.List<RestaurantSummary>` | Retrofit has no converter for that type: usually the kotlinx-serialization **plugin** isn't applied, the class lacks `@Serializable`, or the converter factory isn't registered | See the three checks below this table |
 | Map is grey | OSM tiles blocked, or no user agent | Check internet on the device; `Configuration.getInstance().userAgentValue` is set in `QuickBiteApp`. |
 | Chrome on the device can't reach `localhost:8000` | `adb reverse` lost, or NGINX down | `adb reverse --list`; `curl localhost:8000/nginx-health` on the laptop. |
+
+**Retrofit converter checks** (in order; the first mismatch is usually the cause):
+
+```bash
+cd clients/android
+grep -n "serialization" app/build.gradle.kts            # 1) plugin + dependency present?
+grep -rn "@Serializable" app/src/main/java/com/quickbite/app/net/Models.kt | head
+grep -n "asConverterFactory\|addConverterFactory" app/src/main/java/com/quickbite/app/net/Api.kt
+```
+
+1. `app/build.gradle.kts` must apply the plugin **and** match your Kotlin version:
+   `id("org.jetbrains.kotlin.plugin.serialization") version "<same as your Kotlin>"`, plus
+   `implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")`.
+   Without the plugin, `@Serializable` compiles but generates no serializer, and Retrofit can't build a converter.
+2. Every model the API returns needs `@Serializable`, including nested ones (`RestaurantDetail` → `RestaurantSummary`, `MenuItem`).
+3. `Retrofit.Builder()` must register the factory:
+   `.addConverterFactory(Network.json.asConverterFactory("application/json".toMediaType()))`
+   with the import `retrofit2.converter.kotlinx.serialization.asConverterFactory`.
 
 ## Spring Boot 4 / build
 

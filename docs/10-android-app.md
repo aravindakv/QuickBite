@@ -21,6 +21,7 @@ App ──(3) POST /token {code, code_verifier}──► Keycloak ──► acce
 
 - **Why the system browser, not a WebView?** The app never sees the password, and a WebView would let a malicious app keylog it. The browser also shares SSO cookies. This is RFC 8252 ("OAuth for native apps").
 - **PKCE:** the app makes a random `code_verifier` and sends only its SHA-256 hash (`code_challenge`) in step 1. In step 3 it proves possession of the verifier. An intercepted `code` is useless without it. AppAuth does all of this automatically.
+- **Two sessions, not one.** The app holds tokens; **Keycloak holds an SSO cookie in the browser**. Clearing app storage or deleting local tokens leaves that cookie alive, so the next login silently re-authenticates as the same user. Logging out properly therefore means both an `EndSessionRequest` (RP-initiated logout) and `prompt=login` on every authorization request.
 - **Token storage:** tokens are encrypted with an AES key that lives in the **Android Keystore** (hardware-backed on most devices). The key never leaves secure hardware.
 
 ### Networking on the device
@@ -258,7 +259,16 @@ class AuthManager(context: Context) {
     private val connectionBuilder: ConnectionBuilder =
         if (BuildConfig.DEBUG) DevConnectionBuilder else DefaultConnectionBuilder.INSTANCE
     private val service = AuthorizationService(
-        context, AppAuthConfiguration.Builder().setConnectionBuilder(connectionBuilder).build()
+        context,
+        AppAuthConfiguration.Builder()
+            .setConnectionBuilder(connectionBuilder)
+            // AppAuth refuses to validate an ID token whose issuer is not https, even when the
+            // connection builder allows plain HTTP. Our local Keycloak is http://localhost:8180,
+            // so skip that ONE check in debug builds. File 17 (Keycloak behind TLS) removes the need.
+            // Server-side security is unaffected: every API call carries the ACCESS token, which the
+            // gateway and each service verify by signature, issuer and audience.
+            .setSkipIssuerHttpsCheck(BuildConfig.DEBUG)
+            .build()
     )
 
     @Volatile var state: AuthState = store.get(KEY)?.let { AuthState.jsonDeserialize(it) } ?: AuthState()
@@ -270,7 +280,12 @@ class AuthManager(context: Context) {
         val config = discover()
         val request = AuthorizationRequest.Builder(
             config, BuildConfig.CLIENT_ID, ResponseTypeValues.CODE, Uri.parse(REDIRECT_URI)
-        ).setScopes("openid", "profile").build()   // PKCE code_verifier/challenge generated here automatically
+        ).setScopes("openid", "profile")
+            // Keycloak keeps its OWN SSO cookie in the browser. Without prompt=login it silently
+            // re-authenticates from that cookie, so "clear app storage" or logout still lands you
+            // straight back in as the previous user, with no credential form.
+            .setPrompt("login")
+            .build()   // PKCE code_verifier/challenge generated here automatically
         return service.getAuthorizationRequestIntent(request)
     }
 
@@ -312,6 +327,22 @@ class AuthManager(context: Context) {
 
     fun clear() { state = AuthState(); store.remove(KEY) }
 
+    /** RP-initiated logout: ends the Keycloak BROWSER session, not just our local tokens. */
+    suspend fun endSessionIntent(): Intent {
+        val config = discover()
+        val request = EndSessionRequest.Builder(config)
+            .setIdTokenHint(requireNotNull(state.idToken) { "endSessionIntent() called while not logged in" })
+            .setPostLogoutRedirectUri(Uri.parse(LOGOUT_REDIRECT_URI))
+            .build()
+        return service.getEndSessionRequestIntent(request)
+    }
+
+    /** Diagnostics for the end-session round-trip; local state is cleared regardless of the outcome. */
+    fun logEndSessionResult(data: Intent?) {
+        val error = data?.let { AuthorizationException.fromIntent(it) } ?: return
+        android.util.Log.e("QuickBiteAuth", "end-session returned: ${error.type}/${error.code} ${error.errorDescription}")
+    }
+
     private fun persist() = store.put(KEY, state.jsonSerializeString())
 
     private suspend fun discover(): AuthorizationServiceConfiguration =
@@ -325,6 +356,7 @@ class AuthManager(context: Context) {
     companion object {
         private const val KEY = "auth_state"
         const val REDIRECT_URI = "com.quickbite.app:/oauth2redirect"
+        const val LOGOUT_REDIRECT_URI = "com.quickbite.app:/logout"   // matches post.logout.redirect.uris in the realm
     }
 }
 ```
@@ -573,10 +605,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if ("rider" !in roles) { loadRestaurants(); loadCards() }
     }
 
-    fun logout() = launchSafe {
+    /** Logout needs a browser round-trip, so it is split like login: build the Intent, handle the result. */
+    suspend fun logoutIntent(): Intent = auth.endSessionIntent()
+
+    fun onLogoutResult(data: Intent?) = launchSafe {
+        auth.logEndSessionResult(data)
         runCatching { api.logout() }          // server-side: revoke the whole session (sid denylist)
         updatesJob?.cancel(); riderJob?.cancel()
-        auth.clear()
+        auth.clear()                          // local tokens
         _state.value = UiState()
     }
 
@@ -756,10 +792,10 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppScaffold(s: UiState, vm: AppViewModel, onLogin: () -> Unit) {
+fun AppScaffold(s: UiState, vm: AppViewModel, onLogin: () -> Unit, onLogout: () -> Unit) {
     Scaffold(topBar = {
         TopAppBar(title = { Text(if (s.user.isBlank()) "QuickBite" else "QuickBite · ${s.user}") },
-            actions = { if (s.screen != Screen.Login) TextButton(onClick = vm::logout) { Text("Logout") } })
+            actions = { if (s.screen != Screen.Login) TextButton(onClick = onLogout) { Text("Logout") } })
     }) { pad ->
         Column(Modifier.padding(pad).padding(16.dp).fillMaxSize()) {
             if (s.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -964,13 +1000,18 @@ class MainActivity : ComponentActivity() {
     private val loginLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         vm.onLoginResult(it.data)
     }
+    private val logoutLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        vm.onLogoutResult(it.data)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
                 val state by vm.state.collectAsStateWithLifecycle()
-                AppScaffold(state, vm) { lifecycleScope.launch { loginLauncher.launch(vm.loginIntent()) } }
+                AppScaffold(state, vm,
+                    onLogin = { lifecycleScope.launch { loginLauncher.launch(vm.loginIntent()) } },
+                    onLogout = { lifecycleScope.launch { logoutLauncher.launch(vm.logoutIntent()) } })
             }
         }
     }
@@ -1028,6 +1069,8 @@ Then click **Run ▶** in Android Studio.
 | M1 | PKCE login | Log in; check Keycloak admin → Sessions | Session listed for android-app |
 | M2 | Token refresh | Stay in the app > 5 min, then browse | Works: silent refresh (logcat shows a `/token` call) |
 | M3 | Refresh rotation | Two refreshes in logcat | Each uses a new refresh token |
+| M19 | Real logout | Log in → **Logout** (a browser tab flashes) → **Log in** again | The Keycloak credential form appears; no silent re-login |
+| M20 | Clear storage | `adb shell pm clear com.quickbite.app` → launch → Log in | Credential form appears (not an instant login as the previous user) |
 | M4 | Logout revocation | Copy the access token from logcat *before* logout, log out, curl with it | `401 session revoked` |
 | M5 | Idempotent order | Enable airplane mode right after tapping *Place order*, disable, tap again | Exactly **one** order in `GET /api/orders` |
 | M6 | WebSocket reconnect | During tracking: `docker restart quickbite-realtime-svc-1` | The app reconnects (backoff), and later statuses still arrive |
@@ -1041,6 +1084,7 @@ Then click **Run ▶** in Android Studio.
 | M15 | Amex CVC | Quick-fill Amex, change the CVC to 3 digits | "CVC must be 4 digits" |
 | M16 | Sold-out item | Add the last menu item (marked "Sold out") and order | Error: "… is sold out" (409) |
 | M17 | Second city | Tap **Mumbai** | 6 Mumbai restaurants |
+| M18 | ID token accepted | Log in on a debug build | No "Invalid ID Token"; the restaurant list appears |
 | M10 | Cleartext policy | Change `API_BASE_URL` to another host over `http://` | Blocked by the network security config |
 
 ### Unit test example (JVM, no device): MockWebServer

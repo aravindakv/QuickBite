@@ -553,20 +553,9 @@ class DemoPackTest {
 implementation(project(":libs:demo-data"))
 ```
 
-`services/gateway/src/main/resources/application.yml`: add the route and the demo block.
+`services/gateway/src/main/resources/application.yml`: the demo routes (`demo-status`, `demo-control`, `demo-speed`, with input validation) are already part of the hardened route list in **file 04, step 5.7**. If you skipped that step, add a simple route `Path=/api/demo/**` → `${DEMO_URL:http://localhost:8086}`. Then add the demo block:
 
 ```yaml
-spring:
-  cloud:
-    gateway:
-      server:
-        webflux:
-          routes:
-            # ...existing routes...
-            - id: demo
-              uri: ${DEMO_URL:http://localhost:8086}
-              predicates: ["Path=/api/demo/**"]
-
 quickbite:
   environment: ${APP_ENV:local}
   demo:
@@ -1845,6 +1834,16 @@ object Backends {
 
 This version includes everything from file 10 (plus cards) and adds settings, demo modes and order history.
 
+> **`MainActivity` must handle the null Intent** that offline demo returns, otherwise logout crashes there:
+> ```kotlin
+> onLogout = {
+>     lifecycleScope.launch {
+>         val intent = vm.logoutIntent()
+>         if (intent != null) logoutLauncher.launch(intent) else vm.onLogoutResult(null)
+>     }
+> }
+> ```
+
 ```kotlin
 package com.quickbite.app.ui
 
@@ -1944,7 +1943,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if ("rider" !in roles) { loadRestaurants(); loadCards() }
     }
 
-    fun logout() = launchSafe {
+    /** Offline demo has no browser session, so it skips the end-session round-trip (returns null). */
+    suspend fun logoutIntent(): Intent? = if (backend.offline) null else auth.endSessionIntent()
+
+    fun onLogoutResult(data: Intent?) = launchSafe {
+        if (!backend.offline) auth.logEndSessionResult(data)
         runCatching { api.logout() }
         updatesJob?.cancel(); riderJob?.cancel()
         if (!backend.offline) auth.clear()
@@ -2216,14 +2219,14 @@ In `ui/Screens.kt`, **replace** `AppScaffold` and `Login` with these versions (t
 ```kotlin
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppScaffold(s: UiState, vm: AppViewModel, onLogin: () -> Unit) {
+fun AppScaffold(s: UiState, vm: AppViewModel, onLogin: () -> Unit, onLogout: () -> Unit) {
     Scaffold(topBar = {
         Column {
             TopAppBar(title = { Text(if (s.user.isBlank()) "QuickBite" else "QuickBite · ${s.user}") },
                 actions = {
                     if ("customer" in s.roles && s.screen != Screen.Settings) TextButton(onClick = vm::openOrders) { Text("Orders") }
                     TextButton(onClick = vm::openSettings) { Text("⚙") }
-                    if (s.screen != Screen.Login && s.screen != Screen.Settings) TextButton(onClick = vm::logout) { Text("Logout") }
+                    if (s.screen != Screen.Login && s.screen != Screen.Settings) TextButton(onClick = onLogout) { Text("Logout") }
                 })
             if (s.settings.demoMode != com.quickbite.app.settings.DemoMode.OFF) {
                 Surface(color = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.fillMaxWidth()) {

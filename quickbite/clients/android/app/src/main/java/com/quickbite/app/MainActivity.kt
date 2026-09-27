@@ -4,44 +4,40 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.quickbite.app.ui.theme.QuickBiteAppTheme
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.activity.viewModels
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.lifecycleScope
+import com.quickbite.app.ui.AppScaffold
+import com.quickbite.app.ui.AppViewModel
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private val vm: AppViewModel by viewModels()
+    private val loginLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            vm.onLoginResult(it.data)
+        }
+    private val logoutLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            vm.onLogoutResult(it.data)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            QuickBiteAppTheme {
-                Scaffold( modifier = Modifier.fillMaxSize() ) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+            MaterialTheme {
+                val state by vm.state.collectAsStateWithLifecycle()
+                AppScaffold(
+                    state,
+                    vm,
+                    onLogin = { lifecycleScope.launch { loginLauncher.launch(vm.loginIntent()) } },
+                    onLogout = { lifecycleScope.launch { logoutLauncher.launch(vm.logoutIntent()) } }
+                )
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    QuickBiteAppTheme {
-        Greeting("Android")
     }
 }
