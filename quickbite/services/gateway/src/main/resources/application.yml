@@ -19,9 +19,9 @@ spring:
           default-filters:
             - name: RequestRateLimiter
               args:
-                redis-rate-limiter.replenishRate: 20
-                redis-rate-limiter.burstCapacity: 40
-                redis-rate-limiter.requestedTokens: 1
+                "[redis-rate-limiter.replenishRate]": 20
+                "[redis-rate-limiter.burstCapacity]": 40
+                "[redis-rate-limiter.requestedTokens]": 1
                 key-resolver: "#{@userKeyResolver}"
           routes:
             - id: catalog
@@ -63,7 +63,14 @@ quickbite:
   session:
     revoke-ttl: 10h             # = Keycloak ssoSessionMaxLifespan
     idle-ttl: 30m
+  track:
+    - id: orders-read
+      uri: ${ORDER_URL:http://localhost:8082}
+      predicates:
+        - "Path=/api/orders,/api/orders/rider/active,/api/orders/{id:[0-9]{1,20}},/api/orders/{id:[0-9]{1,20}}/track"
+        - Method=GET
+      filters: [ValidateQuery=no-query]
 
 logging:
   level:
-    org.springframework.cloud.gateway: INFO
+    "[org.springframework.cloud.gateway]": INFO

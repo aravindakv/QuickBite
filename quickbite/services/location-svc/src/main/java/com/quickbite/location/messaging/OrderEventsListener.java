@@ -11,6 +11,7 @@ import static com.quickbite.common.kafka.KafkaErrorHandlingAutoConfiguration.hea
 @Component
 public class OrderEventsListener {
     record StatusChanged(String orderId, String customerId, String status, String riderId) {}
+
     private final RiderLocationService service;
     private final JsonMapper json;
 
@@ -20,8 +21,9 @@ public class OrderEventsListener {
     public void on(ConsumerRecord<String, String> rec) {
         if (!"order.status-changed".equals(header(rec, "eventType"))) return;
         StatusChanged e = json.readValue(rec.value(), StatusChanged.class);
-        if (e.riderId() != null && ("DELIVERED".equals(e.status()) || "CANCELLED".equals(e.status()))) {
-            service.release(e.riderId(), e.orderId());   // idempotent by nature: second release returns 0
+        if ("DELIVERED".equals(e.status()) || "CANCELLED".equals(e.status())) {
+            if (e.riderId() != null) service.release(e.riderId(), e.orderId());   // idempotent by nature
+            service.clearTrack(e.orderId());                                      // free the trail (file 20)
         }
     }
 }

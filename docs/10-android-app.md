@@ -1069,6 +1069,7 @@ Then click **Run ▶** in Android Studio.
 | M1 | PKCE login | Log in; check Keycloak admin → Sessions | Session listed for android-app |
 | M2 | Token refresh | Stay in the app > 5 min, then browse | Works: silent refresh (logcat shows a `/token` call) |
 | M3 | Refresh rotation | Two refreshes in logcat | Each uses a new refresh token |
+| M21 | Rider path | Order with a rider online, watch the map; then force-stop and reopen mid-delivery | A blue polyline grows behind the rider and is **restored** after reopening (backfill), with a counting-down ETA |
 | M19 | Real logout | Log in → **Logout** (a browser tab flashes) → **Log in** again | The Keycloak credential form appears; no silent re-login |
 | M20 | Clear storage | `adb shell pm clear com.quickbite.app` → launch → Log in | Credential form appears (not an instant login as the previous user) |
 | M4 | Logout revocation | Copy the access token from logcat *before* logout, log out, curl with it | `401 session revoked` |

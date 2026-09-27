@@ -43,3 +43,10 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class TestCard(val number: String, val brand: String, val behavior: String,
                                   val declineCode: String? = null, val description: String)
+
+@Serializable data class TrackPoint(val lat: Double, val lon: Double, val ts: Long = 0)
+
+@Serializable data class TrackDto(
+    val orderId: String, val status: String, val riderId: String? = null,
+    val path: List<TrackPoint> = emptyList(), val rider: TrackPoint? = null,
+    val destination: TrackPoint, val distanceKm: Double? = null, val etaMinutes: Int? = null)

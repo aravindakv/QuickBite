@@ -46,7 +46,7 @@ Payment uses alice's saved card. Pick a **decline test card** in the app and ste
 | 01 | `01-prerequisites-and-setup.md` | Tools, versions, machine sizing | – |
 | 02 | `02-monorepo-gradle-and-common-lib.md` | Gradle monorepo, convention plugins, shared library (session-id, security, watchdog, outbox, IDs) | 1, 3, 9 |
 | 03 | `03-local-infrastructure-compose.md` | Postgres, Mongo, Redis, Kafka (KRaft), Keycloak realm, NGINX | 4, 5, 7 |
-| 04 | `04-api-gateway-oauth-jwt-session.md` | Spring Cloud Gateway, JWT validation, session revocation, rate limiting | 1, 3, 7 |
+| 04 | `04-api-gateway-oauth-jwt-session.md` | Spring Cloud Gateway, JWT validation, session revocation, rate limiting, **input validation** (sanity filter, allow-listed routes, JSON Schemas) | 1, 3, 7, 9 |
 | 05 | `05-catalog-service.md` | MongoDB, cache-aside with Redis, ETag/CDN headers | 7, 8 |
 | 06 | `06-order-service.md` | Order state machine, outbox, saga, dispatcher, service-to-service auth | 1, 5, 7 |
 | 07 | `07-payment-service.md` | Circuit breaker, retry, idempotency, dead-letter topics | 5, 7, 8 |
@@ -59,6 +59,10 @@ Payment uses alice's saved card. Pick a **decline test card** in the app and ste
 | 14 | `14-troubleshooting.md` | Symptom → cause → fix table | – |
 | 15 | `15-test-data.md` | **Test data reference:** users, 22 restaurants, test cards, scenario matrix, helper scripts | 10 |
 | 16 | `16-demo-mode.md` | **Demo Mode:** JSON demo pack, `DEMO_MODE` server setting, virtual riders (demo-svc), Android Settings screen with Server/Offline demo | 1, 2, 5, 9, 10 |
+| 17 | `17-keycloak-production-mode.md` | **Keycloak in production mode:** HTTPS via NGINX + mkcert, Postgres, optimized image, secrets, new issuer for services/scripts/Android | 3, 4, 9 |
+| 18 | `18-capacity-sizing.md` | **Capacity sizing:** CPU/memory/cache/storage/network servers per service for a 10-year horizon, computed by `scripts/capacity_model.py` | 6 |
+| 19 | `19-fix-context-propagation.md` | **Fix:** session-id / correlation-id reaching the outbox and Kafka headers (explicit `RequestContext` instead of MDC) | 1, 10 |
+| 20 | `20-live-rider-path.md` | **Live rider path:** track API (Redis trail + ownership check), polyline on the map, ETA, offline-demo support, capacity impact | 2, 6, 7 |
 
 Topic numbers match your original list (1 = services + session-id … 11 = horizontal/vertical scaling).
 

@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -87,6 +88,7 @@ fun AppScaffold(s: UiState, vm: AppViewModel, onLogin: () -> Unit, onLogout: () 
 
 @Composable private fun Tracking(s: UiState, vm: AppViewModel) {
     val o = s.order ?: return
+    LaunchedEffect(o.id) { vm.loadTrack(o.id) }      // backfill on (re)entry; needs androidx.compose.runtime.LaunchedEffect
     Column(Modifier.fillMaxSize()) {
         Text("Order ${o.id}", style = MaterialTheme.typography.titleMedium)
         Text("Status: ${o.status}", style = MaterialTheme.typography.headlineSmall)
@@ -95,7 +97,11 @@ fun AppScaffold(s: UiState, vm: AppViewModel, onLogin: () -> Unit, onLogout: () 
             p.failureReason?.let { Text("Reason: $it", color = MaterialTheme.colorScheme.error) }
         }
         Spacer(Modifier.height(8.dp))
-        MapPane(destination = o.deliveryLat to o.deliveryLon, rider = s.riderPos)
+        MapPane(destination = o.deliveryLat to o.deliveryLon, rider = s.riderPos, path = s.riderPath)
+        s.etaMinutes?.let { eta ->
+            Text("Arriving in ~$eta min" + (s.distanceKm?.let { " · %.1f km away".format(it) } ?: ""),
+                style = MaterialTheme.typography.titleMedium)
+        }
         Spacer(Modifier.height(8.dp))
         LazyColumn(Modifier.weight(1f)) { items(s.log.reversed()) { Text(it, style = MaterialTheme.typography.bodySmall) } }
         if (o.status == "DELIVERED" || o.status == "CANCELLED") Button(onClick = vm::back) { Text("Order again") }

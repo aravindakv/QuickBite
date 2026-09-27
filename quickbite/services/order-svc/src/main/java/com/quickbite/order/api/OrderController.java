@@ -33,6 +33,14 @@ public class OrderController {
         return RequestContext.of(sessionId, correlationId);
     }
 
+    private Order visibleOrder(long id, Jwt jwt, Authentication auth) {
+        Order o = repo.findById(id).orElseThrow(() -> new NoSuchElementException("order " + id));
+        boolean admin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"));
+        // Object-level authorization: stops "BOLA" (alice reading bob's order by guessing ids)
+        if (!o.visibleTo(jwt.getSubject(), admin)) throw new AccessDeniedException("not your order");
+        return o;
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('customer')")
     public ResponseEntity<OrderResponse> place(@AuthenticationPrincipal Jwt jwt,
@@ -51,10 +59,13 @@ public class OrderController {
 
     @GetMapping("/{id}")
     public OrderResponse get(@PathVariable long id, @AuthenticationPrincipal Jwt jwt, Authentication auth) {
-        Order o = repo.findById(id).orElseThrow(() -> new NoSuchElementException("order " + id));
-        boolean admin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"));
-        if (!o.visibleTo(jwt.getSubject(), admin)) throw new AccessDeniedException("not your order");
-        return OrderResponse.from(o);
+        return OrderResponse.from(visibleOrder(id, jwt, auth));
+    }
+
+    /** Live rider path for the map (file 20). Same ownership rule as reading the order. */
+    @GetMapping("/{id}/track")
+    public TrackResponse track(@PathVariable long id, @AuthenticationPrincipal Jwt jwt, Authentication auth) {
+        return service.track(visibleOrder(id, jwt, auth));
     }
 
     @GetMapping("/rider/active")

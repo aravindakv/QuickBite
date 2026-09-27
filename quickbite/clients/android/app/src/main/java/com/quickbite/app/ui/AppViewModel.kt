@@ -38,6 +38,9 @@ data class UiState(
     val testCards: List<TestCard> = emptyList(),
     val showAddCard: Boolean = false,
     val payment: PaymentView? = null,          // shown on the tracking screen (e.g. decline reason)
+    val riderPath: List<Pair<Double, Double>> = emptyList(),
+    val etaMinutes: Int? = null,
+    val distanceKm: Double? = null,
 )
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
@@ -124,6 +127,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val order = api.placeOrder(checkoutKey, req)
         _state.update { it.copy(order = order, payment = null, riderPos = null,
             log = listOf("Order ${order.id}: ${order.status}"), screen = Screen.Tracking) }
+        loadTrack(order.id)                     // empty at first; refreshed on every status change below
     }
 
     fun back() = _state.update { it.copy(screen = Screen.Restaurants, detail = null) }
@@ -142,13 +146,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                             st.copy(order = st.order?.takeIf { it.id == orderId }?.copy(status = status) ?: st.order,
                                 log = (st.log + "Order $orderId → $status").takeLast(30))
                         }
-                        // Payment outcome (card used, decline reason) once it's decided
-                        if (status in setOf("PAID", "CANCELLED", "DELIVERED") && _state.value.order?.id == orderId) {
-                            runCatching { api.payment(orderId) }.getOrNull()?.let { p -> _state.update { it.copy(payment = p) } }
+                        if (_state.value.order?.id == orderId) {
+                            loadTrack(orderId)                    // <-- backfill the path for the new status
+                            if (status in setOf("PAID", "CANCELLED", "DELIVERED")) {
+                                runCatching { api.payment(orderId) }.getOrNull()?.let { p -> _state.update { it.copy(payment = p) } }
+                            }
                         }
                     }
-                    "RIDER_LOCATION" -> _state.update {
-                        it.copy(riderPos = msg["lat"]!!.jsonPrimitive.double to msg["lon"]!!.jsonPrimitive.double)
+                    "RIDER_LOCATION" -> {
+                        val p = msg["lat"]!!.jsonPrimitive.double to msg["lon"]!!.jsonPrimitive.double
+                        _state.update {
+                            it.copy(riderPos = p,
+                                riderPath = (it.riderPath + p).takeLast(300))   // bound the polyline
+                        }
                     }
                 }
             }
@@ -196,7 +206,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun launchSafe(block: suspend () -> Unit) = viewModelScope.launch {
         _state.update { it.copy(busy = true, error = null) }
+        _state.update { it.copy(busy = true, error = null) }
         try { block() } catch (e: Exception) { _state.update { it.copy(error = readableError(e)) } }
         finally { _state.update { it.copy(busy = false) } }
+    }
+
+    /** Backfill the path drawn so far: called when the tracking screen opens and on every status change. */
+    fun loadTrack(orderId: String) = viewModelScope.launch {
+        val t = runCatching { api.track(orderId) }.getOrNull() ?: return@launch
+        _state.update { st ->
+            if (st.order?.id != orderId) st else st.copy(
+                riderPath = t.path.map { it.lat to it.lon },
+                riderPos = t.rider?.let { it.lat to it.lon } ?: st.riderPos,
+                etaMinutes = t.etaMinutes, distanceKm = t.distanceKm)
+        }
     }
 }

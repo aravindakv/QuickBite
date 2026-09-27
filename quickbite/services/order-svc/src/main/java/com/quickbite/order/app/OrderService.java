@@ -4,6 +4,7 @@ import com.quickbite.common.context.RequestContext;
 import com.quickbite.common.id.SnowflakeIdGenerator;
 import com.quickbite.common.outbox.IdempotencyGuard;
 import com.quickbite.common.outbox.OutboxWriter;
+import com.quickbite.order.api.TrackResponse;
 import com.quickbite.order.client.Clients.*;
 import com.quickbite.order.domain.*;
 import com.quickbite.order.domain.Events.*;
@@ -19,22 +20,25 @@ import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
+    /** City two-wheeler average including stops. Crude on purpose: see file 20. */
+    private static final double AVERAGE_SPEED_KMH = 18;
+
     private final OrderRepository repo;
     private final CatalogClient catalog;
+    private final LocationClient location;
     private final CircuitBreakerFactory<?, ?> breakers;
     private final OutboxWriter outbox;
     private final IdempotencyGuard idempotency;
     private final SnowflakeIdGenerator ids;
     private final TransactionTemplate tx;
 
-    public OrderService(OrderRepository repo, CatalogClient catalog, CircuitBreakerFactory<?, ?> breakers,
-                        OutboxWriter outbox, IdempotencyGuard idempotency, SnowflakeIdGenerator ids,
-                        TransactionTemplate tx) {
-        this.repo = repo; this.catalog = catalog; this.breakers = breakers; this.outbox = outbox;
-        this.idempotency = idempotency; this.ids = ids; this.tx = tx;
+    public OrderService(OrderRepository repo, CatalogClient catalog, LocationClient location,
+                        CircuitBreakerFactory<?, ?> breakers, OutboxWriter outbox, IdempotencyGuard idempotency,
+                        SnowflakeIdGenerator ids, TransactionTemplate tx) {
+        this.repo = repo; this.catalog = catalog; this.location = location; this.breakers = breakers;
+        this.outbox = outbox; this.idempotency = idempotency; this.ids = ids; this.tx = tx;
     }
 
-    @SuppressWarnings("null")
     public Order place(String customerId, PlaceOrderRequest req, String idempotencyKey, RequestContext ctx) {
         if (idempotencyKey != null) {
             var existing = repo.findByClientRequestId(idempotencyKey);
@@ -104,7 +108,35 @@ public class OrderService {
         });
     }
 
+    /** Live tracking (file 20). Best-effort: a tracking failure must never break the screen. */
+    public TrackResponse track(Order o) {
+        String orderId = o.getId().toString();
+        TrackPoint destination = new TrackPoint(o.getDeliveryLat(), o.getDeliveryLon(), 0L);
+        if (!o.getStatus().isActiveDelivery()) {                    // not out for delivery: nothing to draw yet
+            return new TrackResponse(orderId, o.getStatus().name(), o.getRiderId(),
+                    List.of(), null, destination, null, null);
+        }
+        // Explicit type witness: without it, javac infers T from the fallback and fails to match List<TrackPoint>.
+        List<TrackPoint> path = breakers.create("location").<List<TrackPoint>>run(
+                () -> location.track(orderId),
+                t -> List.of());
+        TrackPoint rider = path.isEmpty() ? null : path.get(path.size() - 1);
+        Double km = rider == null ? null
+                : round(distanceKm(rider.lat(), rider.lon(), destination.lat(), destination.lon()));
+        Integer eta = km == null ? null : (int) Math.max(1, Math.ceil(km / AVERAGE_SPEED_KMH * 60));
+        return new TrackResponse(orderId, o.getStatus().name(), o.getRiderId(), path, rider, destination, km, eta);
+    }
+
     private void publishStatus(Order o, RequestContext ctx) {
         outbox.write(ctx, Events.ORDERS_TOPIC, o.getId().toString(), "order.status-changed", Events.statusOf(o));
+    }
+
+    private static double round(double v) { return Math.round(v * 100) / 100.0; }
+
+    /** Same equirectangular approximation as location-svc. */
+    static double distanceKm(double lat1, double lon1, double lat2, double lon2) {
+        double dx = (lon2 - lon1) * 111.32 * Math.cos(Math.toRadians((lat1 + lat2) / 2));
+        double dy = (lat2 - lat1) * 110.57;
+        return Math.hypot(dx, dy);
     }
 }

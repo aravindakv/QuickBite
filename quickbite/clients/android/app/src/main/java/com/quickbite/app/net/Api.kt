@@ -19,6 +19,7 @@ interface QuickBiteApi {
     @GET("api/restaurants/{id}") suspend fun restaurant(@Path("id") id: String): RestaurantDetail
     @POST("api/orders") suspend fun placeOrder(@Header("Idempotency-Key") key: String, @Body body: PlaceOrderRequest): OrderDto
     @GET("api/orders/{id}") suspend fun order(@Path("id") id: String): OrderDto
+    @GET("api/orders/{id}/track") suspend fun track(@Path("id") id: String): TrackDto
     @GET("api/orders/rider/active") suspend fun riderActive(): Response<OrderDto>   // 204 when nothing assigned
     @POST("api/orders/{id}/pickup") suspend fun pickup(@Path("id") id: String): OrderDto
     @POST("api/orders/{id}/deliver") suspend fun deliver(@Path("id") id: String): OrderDto

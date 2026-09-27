@@ -26,10 +26,19 @@ public class RiderLocationService {
 
     public record LocationEvent(String riderId, double lat, double lon, long ts) {}
     public record Candidate(String riderId, double distanceKm) {}
+    public record TrackPoint(double lat, double lon, long ts) {}
 
     /** Atomic compare-and-delete: release only if the claim still belongs to this order. */
     private static final DefaultRedisScript<Long> RELEASE = new DefaultRedisScript<>("""
             if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end
+            """, Long.class);
+
+    /** One round trip: append the point, cap the list, refresh the TTL. */
+    private static final DefaultRedisScript<Long> APPEND_TRACK = new DefaultRedisScript<>("""
+            redis.call('RPUSH', KEYS[1], ARGV[1])
+            redis.call('LTRIM', KEYS[1], -tonumber(ARGV[2]), -1)
+            redis.call('EXPIRE', KEYS[1], tonumber(ARGV[3]))
+            return redis.call('LLEN', KEYS[1])
             """, Long.class);
 
     private final StringRedisTemplate redis;
@@ -38,13 +47,21 @@ public class RiderLocationService {
     private final String geoKey;
     private final Duration aliveTtl;
     private final Duration claimTtl;
+    private final int maxPoints;
+    private final Duration trackTtl;
+    private final double minMetres;
 
     public RiderLocationService(StringRedisTemplate redis, KafkaTemplate<String, String> kafka, JsonMapper json,
                                 @Value("${quickbite.city}") String city,
                                 @Value("${quickbite.rider.alive-ttl}") Duration aliveTtl,
-                                @Value("${quickbite.rider.claim-ttl}") Duration claimTtl) {
+                                @Value("${quickbite.rider.claim-ttl}") Duration claimTtl,
+                                @Value("${quickbite.track.max-points:120}") int maxPoints,
+                                @Value("${quickbite.track.ttl:3h}") Duration trackTtl,
+                                @Value("${quickbite.track.min-metres:25}") double minMetres) {
         this.redis = redis; this.kafka = kafka; this.json = json;
-        this.geoKey = "riders:" + city; this.aliveTtl = aliveTtl; this.claimTtl = claimTtl;
+        this.geoKey = "riders:" + city;
+        this.aliveTtl = aliveTtl; this.claimTtl = claimTtl;
+        this.maxPoints = maxPoints; this.trackTtl = trackTtl; this.minMetres = minMetres;
     }
 
     public void update(String riderId, double lat, double lon) {
@@ -52,9 +69,12 @@ public class RiderLocationService {
         redis.opsForGeo().add(geoKey, new Point(lon, lat), riderId);          // note: (lon, lat) order!
         redis.opsForValue().set("rider:alive:" + riderId, "1", aliveTtl);
 
-        // Location is AP data: fire-and-forget (no outbox). Losing one point out of a stream every 4 s is harmless,
-        // and blocking the socket thread on Kafka acks would add latency to 75k msgs/s.
-        var rec = new ProducerRecord<>(TOPIC, riderId, json.writeValueAsString(new LocationEvent(riderId, lat, lon, Instant.now().toEpochMilli())));
+        String orderId = redis.opsForValue().get("rider:busy:" + riderId);    // only riders on a delivery leave a trail
+        if (orderId != null) appendTrack(orderId, lat, lon);
+
+        // Location is AP data: fire-and-forget (no outbox). Losing one point out of a 4 s stream is harmless.
+        var rec = new ProducerRecord<>(TOPIC, riderId,
+                json.writeValueAsString(new LocationEvent(riderId, lat, lon, Instant.now().toEpochMilli())));
         rec.headers().add("eventType", "rider.location".getBytes(StandardCharsets.UTF_8));
         kafka.send(rec).whenComplete((r, ex) -> { if (ex != null) log.warn("location event dropped: {}", ex.toString()); });
     }
@@ -86,4 +106,49 @@ public class RiderLocationService {
     }
 
     public String currentClaim(String riderId) { return redis.opsForValue().get("rider:busy:" + riderId); }
+
+    // ---------------- rider trail (file 20) ----------------
+
+    /** Best-effort: a failed trail write must never break a GPS update. */
+    private void appendTrack(String orderId, double lat, double lon) {
+        try {
+            TrackPoint last = lastPoint(orderId);
+            // Skip near-duplicates: a rider waiting at the restaurant would otherwise fill the list with jitter.
+            if (last != null && distanceKm(last.lat(), last.lon(), lat, lon) * 1000 < minMetres) return;
+            String payload = json.writeValueAsString(new TrackPoint(lat, lon, Instant.now().toEpochMilli()));
+            redis.execute(APPEND_TRACK, List.of(trackKey(orderId)),
+                    payload, String.valueOf(maxPoints), String.valueOf(trackTtl.toSeconds()));
+        } catch (Exception e) {
+            log.warn("track append failed for order {}: {}", orderId, e.toString());
+        }
+    }
+
+    public List<TrackPoint> track(String orderId) {
+        try {
+            var raw = redis.opsForList().range(trackKey(orderId), 0, -1);
+            return raw == null ? List.of() : raw.stream().map(s -> json.readValue(s, TrackPoint.class)).toList();
+        } catch (Exception e) {
+            log.warn("track read failed for order {}: {}", orderId, e.toString());
+            return List.of();
+        }
+    }
+
+    /** Called when the delivery ends, so finished orders don't hold memory for the full TTL. */
+    public void clearTrack(String orderId) {
+        try { redis.delete(trackKey(orderId)); } catch (Exception ignored) { }
+    }
+
+    private TrackPoint lastPoint(String orderId) {
+        String raw = redis.opsForList().index(trackKey(orderId), -1);
+        return raw == null ? null : json.readValue(raw, TrackPoint.class);
+    }
+
+    private static String trackKey(String orderId) { return "track:order:" + orderId; }
+
+    /** Equirectangular approximation: accurate enough over a few km, far cheaper than haversine. */
+    public static double distanceKm(double lat1, double lon1, double lat2, double lon2) {
+        double dx = (lon2 - lon1) * 111.32 * Math.cos(Math.toRadians((lat1 + lat2) / 2));
+        double dy = (lat2 - lat1) * 110.57;
+        return Math.hypot(dx, dy);
+    }
 }

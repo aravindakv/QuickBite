@@ -109,6 +109,9 @@ curl -sS -X POST http://localhost:8180/realms/quickbite/protocol/openid-connect/
 | Login never asks for credentials (after logout or `pm clear`) | Keycloak's SSO cookie lives in Chrome, outside the app's storage | `.setPrompt("login")` on the authorization request, and RP-initiated logout via `EndSessionRequest` (file 10) |
 | Login fails with `Invalid ID Token`, cause `Issuer must be an https URL` | AppAuth always requires an https issuer before validating an ID token, whatever the connection builder allows | `.setSkipIssuerHttpsCheck(BuildConfig.DEBUG)` on `AppAuthConfiguration` (file 10), or move Keycloak behind TLS (file 17) |
 | `Unable to create converter for java.util.List<RestaurantSummary>` | Retrofit has no converter for that type: usually the kotlinx-serialization **plugin** isn't applied, the class lacks `@Serializable`, or the converter factory isn't registered | See the three checks below this table |
+| Map shows the rider marker but no path | The track endpoint returned an empty `path`: rider not yet assigned, location-svc unreachable (breaker fallback), or the trail expired | `curl .../api/orders/<id>/track \| jq '.status, (.path\|length)'`; check `redis-cli llen track:order:<id>` |
+| Path appears only after the rider moves (empty on entering the screen) | `loadTrack(orderId)` isn't called on screen entry | Add the `LaunchedEffect(o.id) { vm.loadTrack(o.id) }` in `Tracking` (file 20, step 4) |
+| Path never grows although the rider moves | `min-metres` filter too high, or `rider:busy:<id>` missing so updates aren't attributed to an order | Lower `quickbite.track.min-metres`; check the claim key exists |
 | Map is grey | OSM tiles blocked, or no user agent | Check internet on the device; `Configuration.getInstance().userAgentValue` is set in `QuickBiteApp`. |
 | Chrome on the device can't reach `localhost:8000` | `adb reverse` lost, or NGINX down | `adb reverse --list`; `curl localhost:8000/nginx-health` on the laptop. |
 
